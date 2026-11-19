@@ -1,0 +1,18 @@
+{
+  "name": "weread-mini",
+  "version": "2.3.0",
+  "description": "微信读书桌面小窗",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "pack:win": "electron-packager . WeReadMini --platform=win32 --arch=x64 --out=dist --overwrite --icon=icon.ico --asar --ignore=\"^/(dist|distmac|build)\" --ignore=\"\\\\.(ico|icns)$\" --win32metadata.FileDescription=微信读书桌面小窗 --win32metadata.ProductName=微信读书小窗",
+    "pack:mac": "electron-packager . 微信读书小窗 --platform=darwin --arch=arm64,x64 --out=distmac --overwrite --icon=icon.icns --asar --ignore=\"^/(dist|distmac|build)\" --ignore=\"\\\\.(ico|icns)$\" --app-bundle-id=com.zhangbin.weread-mini --extend-info=build/extra.plist"
+  },
+  "author": "Zhang Bin",
+  "license": "ISC",
+  "devDependencies": {
+    "@electron/packager": "^20.3.0",
+    "electron": "^45.3.4"
+  },
+  "productName": "微信读书小窗"
+}

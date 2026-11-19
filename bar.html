@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 30px; overflow: hidden; background: #f4f6f9; user-select: none;
+    font: 12px "Microsoft YaHei UI", "PingFang SC", sans-serif; color: #444; }
+  .bar { display: flex; align-items: center; height: 30px; padding: 0 4px; gap: 1px;
+    cursor: default; border-bottom: 1px solid #e3e7ee; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+  .title { flex: 1; min-width: 0; padding: 0 6px; color: #1b88ee; font-weight: 600; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis; }
+  button { height: 24px; min-width: 24px; padding: 0 3px; border: 0; border-radius: 5px; background: transparent;
+    color: #555; cursor: pointer; display: grid; place-items: center; font: inherit; flex-shrink: 0; }
+  button:hover { background: #e2e8f0; }
+  button:disabled { opacity: .35; cursor: default; background: transparent; }
+  button.on { background: #dbeafe; color: #1b6fd8; }
+  button.close:hover { background: #ef4444; color: #fff; }
+  svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2;
+    stroke-linecap: round; stroke-linejoin: round; }
+  .group { display: flex; align-items: center; background: #e9edf3; border-radius: 6px; padding: 1px; margin: 0 2px; flex-shrink: 0; }
+  .group button:hover { background: #d6dde8; }
+  .aa-s { font-size: 11px; font-weight: 700; }
+  .aa-l { font-size: 15px; font-weight: 700; }
+  #zv { min-width: 38px; font-size: 11px; color: #1b6fd8; }
+  #tone { min-width: 40px; font-size: 11px; }
+  #auto { display: flex; gap: 3px; padding: 0 5px; font-size: 11px; min-width: 26px; }
+  #auto.on { background: #22a55b; color: #fff; }
+  #auto.on.paused { background: #f59e0b; }
+  #auto.on:hover { filter: brightness(1.08); }
+  #autoMore { min-width: 14px; width: 14px; padding: 0; }
+  #autoMore svg { width: 11px; height: 11px; }
+  .title.flash { color: #22a55b; }
+  input[type=range] { width: 56px; height: 4px; accent-color: #1b88ee; margin: 0 3px; flex-shrink: 0; }
+  .sep { width: 1px; height: 16px; background: #d8dee8; margin: 0 2px; flex-shrink: 0; }
+  /* 拖动把手 + 书名区域始终保留，窗口变窄时先收起次要按钮 */
+  .grip { width: 14px; height: 24px; flex-shrink: 0; display: grid; place-items: center; cursor: move; color: #9aa4b2; }
+  .grip svg { width: 10px; height: 16px; fill: currentColor; stroke: none; }
+  .title { min-width: 48px; cursor: move; }
+  .bar:hover .grip { color: #1b88ee; }
+  @media (max-width: 600px) { #op, .sep.o { display: none; } }
+  @media (max-width: 540px) { #reload { display: none; } }
+  @media (max-width: 360px) { #home { display: none; } }
+  @media (max-width: 480px) { #tone, #zv { display: none; } }
+  @media (max-width: 400px) { #fade, #min, #autoMore { display: none; } }
+  @media (max-width: 320px) { .group.zoom, #immersive { display: none; } }
+</style>
+</head>
+<body>
+<div class="bar">
+  <div class="grip" title="按住拖动窗口（也可在窗口任意位置按住 Alt 拖动）"><svg viewBox="0 0 10 16"><circle cx="2.5" cy="3" r="1.4"/><circle cx="7.5" cy="3" r="1.4"/><circle cx="2.5" cy="8" r="1.4"/><circle cx="7.5" cy="8" r="1.4"/><circle cx="2.5" cy="13" r="1.4"/><circle cx="7.5" cy="13" r="1.4"/></svg></div>
+  <button id="back" title="后退 (Alt+←)"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+  <button id="home" title="返回书架"><svg viewBox="0 0 24 24"><path d="M4 19V5a1 1 0 0 1 1-1h3v15M8 4h3v15M14 6l3-1 4 13-3 1z"/><path d="M3 20h18"/></svg></button>
+  <button id="reload" title="刷新 (F5)"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg></button>
+  <div class="title" id="title" title="按住拖动窗口">微信读书</div>
+
+  <div class="group zoom" title="字体大小：Ctrl + 加号/减号，Ctrl + 滚轮，Ctrl+0 恢复">
+    <button id="zoomOut" class="aa-s" title="字体缩小 (Ctrl -)">A−</button>
+    <button id="zv" title="点击恢复 100% (Ctrl+0)">100%</button>
+    <button id="zoomIn" class="aa-l" title="字体放大 (Ctrl +)">A+</button>
+  </div>
+  <div class="group" title="自动翻页：点击开/停 (Alt+P)；鼠标滚轮调快慢 (Alt+[ / Alt+])；右侧小箭头更多设置">
+    <button id="auto"><svg viewBox="0 0 24 24" id="autoIcon"><path d="M7 4l12 8-12 8z"/></svg><span id="autoText"></span></button>
+    <button id="autoMore" title="自动翻页设置"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
+  </div>
+  <button id="tone" title="切换阅读色调 (Ctrl+T)：原色 / 护眼 / 豆沙绿 / 夜间">原色</button>
+  <div class="sep o"></div>
+  <input id="op" type="range" min="20" max="100" step="5" title="窗口不透明度 (Alt+↑/↓)">
+  <button id="fade" title="鼠标移开自动隐身（完全透明且不挡鼠标；托盘菜单可调隐身程度）"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
+  <button id="pin" title="窗口置顶"><svg viewBox="0 0 24 24"><path d="M12 17v5"/><path d="M9 3h6l-1 6 3 3v2H7v-2l3-3z"/></svg></button>
+  <button id="immersive" title="沉浸模式 (Ctrl+H)：工具栏自动隐藏，鼠标移到窗口顶部即出现"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+  <button id="min" title="最小化"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
+  <button id="close" class="close" title="隐藏到托盘 (Alt+Q 唤出)"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+</div>
+<script>
+  const $ = (id) => document.getElementById(id);
+  ['back', 'home', 'reload', 'fade', 'pin', 'immersive', 'min', 'close', 'zoomIn', 'zoomOut', 'tone'].forEach(id =>
+    $(id).addEventListener('click', () => window.api.cmd(id)));
+  $('zv').addEventListener('click', () => window.api.cmd('zoomReset'));
+  $('auto').addEventListener('click', () => window.api.cmd('auto'));
+  $('autoMore').addEventListener('click', () => window.api.cmd('autoMenu'));
+  $('auto').addEventListener('contextmenu', (e) => { e.preventDefault(); window.api.cmd('autoMenu'); });
+  $('auto').addEventListener('wheel', (e) => {        // 在按钮上滚轮调快慢
+    if (e.ctrlKey) return;
+    e.preventDefault(); e.stopPropagation();
+    window.api.cmd(e.deltaY < 0 ? 'autoFaster' : 'autoSlower');
+  }, { passive: false });
+  const PLAY = '<path d="M7 4l12 8-12 8z"/>', PAUSE = '<path d="M8 5v14M16 5v14"/>';
+  window.api.onAuto((a) => {
+    $('auto').classList.toggle('on', a.on);
+    $('auto').classList.toggle('paused', a.on && a.paused);
+    $('autoIcon').innerHTML = a.on ? PAUSE : PLAY;
+    $('autoText').textContent = a.text;
+    $('auto').title = a.on
+      ? (a.mode === 'page' ? `自动翻页中：${a.text} 后翻下一页（点击停止）` : `自动滚动中：${a.text} 像素/秒（点击停止）`)
+      : '开始自动翻页 (Alt+P)';
+  });
+  let flashT = null, curTitle = '微信读书';
+  window.api.onFlash((msg) => {
+    clearTimeout(flashT);
+    $('title').textContent = msg; $('title').classList.add('flash');
+    flashT = setTimeout(() => { $('title').textContent = curTitle; $('title').classList.remove('flash'); }, 1500);
+  });
+  $('op').addEventListener('input', (e) => window.api.cmd('opacity', e.target.value / 100));
+  window.addEventListener('wheel', (e) => {           // 在工具栏上 Ctrl+滚轮 也能调字号
+    if (e.ctrlKey) { e.preventDefault(); window.api.cmd(e.deltaY < 0 ? 'zoomIn' : 'zoomOut'); }
+  }, { passive: false });
+  // 拖动窗口：按住工具栏任意空白处（含书名）拖动
+  const barEl = document.querySelector('.bar');
+  let dragging = false;
+  barEl.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0 || e.target.closest('button, input')) return;
+    e.preventDefault();
+    barEl.setPointerCapture(e.pointerId);
+    dragging = true; window.api.drag('start');
+  });
+  barEl.addEventListener('pointermove', () => { if (dragging) window.api.drag('move'); });
+  const endDrag = () => { if (dragging) { dragging = false; window.api.drag('end'); } };
+  barEl.addEventListener('pointerup', endDrag);
+  barEl.addEventListener('lostpointercapture', endDrag);
+  if (/Mac/.test(navigator.platform)) {
+    document.querySelectorAll('[title]').forEach((el) => {
+      el.title = el.title.replace(/Ctrl\s*\+\s*/g, '⌘').replace(/Ctrl/g, '⌘').replace(/Alt\s*\+\s*/g, '⌥').replace(/Alt/g, '⌥');
+    });
+  }
+  window.api.onState((s) => {
+    $('pin').classList.toggle('on', s.onTop);
+    $('fade').classList.toggle('on', s.fade);
+    $('immersive').classList.toggle('on', s.immersive);
+    $('tone').classList.toggle('on', s.tone !== 'none');
+    $('tone').textContent = s.toneLabel;
+    $('zv').textContent = Math.round(s.zoom * 100) + '%';
+    $('zoomIn').disabled = s.zoom >= 3;
+    $('zoomOut').disabled = s.zoom <= 0.6;
+    $('back').disabled = !s.canBack;
+    curTitle = s.title;
+    if (!flashT || !$('title').classList.contains('flash')) $('title').textContent = s.title;
+    $('title').title = s.title;
+    if (document.activeElement !== $('op')) $('op').value = Math.round(s.opacity * 100);
+  });
+</script>
+</body>
+</html>
