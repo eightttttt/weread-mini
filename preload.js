@@ -6,4 +6,5 @@ contextBridge.exposeInMainWorld('api', {
   onState: (fn) => ipcRenderer.on('state', (_e, s) => fn(s)),
   onAuto: (fn) => ipcRenderer.on('auto', (_e, s) => fn(s)),
   onFlash: (fn) => ipcRenderer.on('flash', (_e, s) => fn(s)),
+  onGlass: (fn) => ipcRenderer.on('glass', (_e, s) => fn(s)),
 });

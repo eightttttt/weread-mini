@@ -20,7 +20,18 @@ const TONES = {
   green: { label: '豆沙绿', css: OV + 'background:#c7edcc;mix-blend-mode:multiply}' },
   night: { label: '夜间', css: OV + 'backdrop-filter:invert(.9) hue-rotate(180deg)}' },
 };
-const TONE_ORDER = ['none', 'sepia', 'green', 'night'];
+// 透明：书页背景全透明，只保留文字，能直接看到后面的桌面
+const CLEAR_SEL = ['html', 'body', '.app', '.routerView', '.wr_horizontalReader', '.wr_horizontalReader_app_content',
+  '.wr_various_font_provider_wrapper', '.readerChapterContent_container', '.readerChapterContent', '.renderTargetContainer',
+  '.wr_canvasContainer', '.readerContent', '.app_content', '.navBarOffset', '.readerFooter'];
+TONES.clear = {
+  label: '透明',
+  css: CLEAR_SEL.map((x) => x + '{background:transparent!important;background-image:none!important;box-shadow:none!important}').join('\n')
+    // 文字加一圈细描边，任何桌面背景上都看得清（深色主题浅色字配深色描边，浅色主题反之）
+    + '\nhtml.wrm-dark canvas{filter:drop-shadow(0 0 1px rgba(0,0,0,.95)) drop-shadow(0 0 2px rgba(0,0,0,.7))!important}'
+    + '\nhtml:not(.wrm-dark) canvas{filter:drop-shadow(0 0 1px rgba(255,255,255,.95)) drop-shadow(0 0 2px rgba(255,255,255,.75))!important}',
+};
+const TONE_ORDER = ['none', 'sepia', 'green', 'night', 'clear'];
 
 if (!app.requestSingleInstanceLock()) { app.quit(); process.exit(0); }
 
@@ -136,7 +147,18 @@ async function applyTone() {
 }
 function setTone(t) {
   cfg.tone = TONES[t] ? t : 'none';
-  applyTone(); saveCfg(); sendState();
+  applyTone(); applyMaterial(); saveCfg(); sendState();
+}
+// 磨玻璃：窗口底层用系统的亚克力/毛玻璃材质（Windows 11、macOS），工具栏半透明地透出它。
+// “透明”色调时关掉材质，让书页背后是清晰的桌面。
+function applyMaterial() {
+  if (!alive()) return;
+  const clear = cfg.tone === 'clear';
+  try {
+    if (process.platform === 'win32' && win.setBackgroundMaterial) win.setBackgroundMaterial(clear ? 'none' : 'acrylic');
+    if (IS_MAC && win.setVibrancy) win.setVibrancy(clear ? null : 'hud');
+  } catch {}
+  if (barAlive()) bar.webContents.send('glass', { clear });
 }
 function cycleTone() {
   setTone(TONE_ORDER[(TONE_ORDER.indexOf(cfg.tone) + 1) % TONE_ORDER.length]);
@@ -366,7 +388,7 @@ function createWindow() {
   win = new BaseWindow({
     ...b, minWidth: 260, minHeight: 200,
     frame: false, show: false, skipTaskbar: true,   // 不在任务栏显示，只在托盘
-    alwaysOnTop: cfg.onTop, backgroundColor: '#ffffff',
+    alwaysOnTop: cfg.onTop, transparent: true, backgroundColor: '#00000000',   // 透明窗口：支持磨玻璃工具栏和透明书页
     icon: path.join(__dirname, 'icon.png'), title: '微信读书 · 桌面小窗',
   });
   if (cfg.onTop) win.setAlwaysOnTop(true, 'floating');
@@ -381,6 +403,8 @@ function createWindow() {
   });
   win.contentView.addChildView(page);
   win.contentView.addChildView(bar);   // 后加入 → 悬浮在书页之上
+  bar.setBackgroundColor('#00000000');
+  page.setBackgroundColor('#00000000');
 
   bar.webContents.loadFile(path.join(__dirname, 'bar.html'));
   const wc = page.webContents;
@@ -418,10 +442,11 @@ function createWindow() {
   win.on('minimize', () => { win.restore(); hideToTray(); });   // Win+D 等系统最小化也收到托盘
 
   layout();
+  applyMaterial();
   graceUntil = Date.now() + 1500;   // 启动后先显示一会儿
   applyOpacity();
   win.show();
-  bar.webContents.once('did-finish-load', sendState);
+  bar.webContents.once('did-finish-load', () => { sendState(); applyMaterial(); });
   startWatcher();
 }
 
@@ -447,6 +472,25 @@ ipcMain.on('drag', (_e, t) => {
     dragTimer = setInterval(dragStep, 10);       // 鼠标移出工具栏也能跟随
   } else if (t === 'move') dragStep();
   else { dragStep(); dragFrom = null; clearInterval(dragTimer); }
+});
+
+// ---------- 右下角拖动调整窗口大小 ----------
+let rszFrom = null, rszTimer = null;
+function rszStep() {
+  if (!rszFrom || !alive()) return;
+  if (Date.now() - rszFrom.t0 > 120000) { rszFrom = null; clearInterval(rszTimer); return; }
+  const p = screen.getCursorScreenPoint();
+  const w = Math.max(260, Math.round(rszFrom.w + p.x - rszFrom.cx)), h = Math.max(200, Math.round(rszFrom.h + p.y - rszFrom.cy));
+  const b = win.getBounds();
+  if (b.width !== w || b.height !== h || b.x !== rszFrom.x || b.y !== rszFrom.y) win.setBounds({ x: rszFrom.x, y: rszFrom.y, width: w, height: h });
+}
+ipcMain.on('rsz', (_e, t) => {
+  if (!alive()) return;
+  if (t === 'start') {
+    const p = screen.getCursorScreenPoint(), b = win.getBounds();
+    rszFrom = { cx: p.x, cy: p.y, x: b.x, y: b.y, w: b.width, h: b.height, t0: Date.now() };
+    clearInterval(rszTimer); rszTimer = setInterval(rszStep, 16);
+  } else { rszStep(); rszFrom = null; clearInterval(rszTimer); layout(); }
 });
 
 // ---------- 切换阅读方式（左右翻页 ⇄ 上下滚动） ----------
@@ -588,7 +632,7 @@ app.on('second-instance', () => { if (win) showWin(); });
 function shutdown() {
   if (quitting) return;
   quitting = true;
-  clearInterval(watchTimer); clearInterval(autoTimer); clearInterval(dragTimer);
+  clearInterval(watchTimer); clearInterval(autoTimer); clearInterval(dragTimer); clearInterval(rszTimer);
   clearTimeout(saveTimer);
   try { fs.writeFileSync(cfgFile(), JSON.stringify(cfg, null, 2)); } catch {}   // 退出前立即保存设置
 }

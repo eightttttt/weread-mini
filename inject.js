@@ -161,6 +161,7 @@ ${CTRL_CSS}
   }
   function ensureExtras() {
     root.classList.toggle('wrm-panel', maskOpen());
+    root.classList.toggle('wrm-dark', /wr_theme=dark/.test(document.cookie));   // 透明背景时按主题选择文字描边颜色
     document.querySelectorAll('.__wrm_item, #__wrm_close').forEach((e) => e.remove());   // 清理旧版本留下的元素
   }
   ensureExtras();
@@ -231,7 +232,14 @@ ${CTRL_CSS}
       localStorage.setItem(POS_KEY, JSON.stringify(m));
     } catch {}
   };
-  const chapKey = () => (/\/web\/reader\//.test(location.pathname) ? location.pathname : null);
+  const inReaderPath = () => /\/web\/reader\//.test(location.pathname);
+  // 章节标识 = 网址 + 章节名。有些书换章时网址不变，只按网址区分会把整本书当成一章（导致恢复时连续翻很多页）
+  function chapKey() {
+    if (!inReaderPath()) return null;
+    const h = document.querySelector(isHor() ? '.wr_horizontalReader .renderTargetPageInfo_header' : '.readerContent .readerContentHeader');
+    const t = h ? h.textContent.trim() : '';
+    return t ? location.pathname + '#' + t : '';          // '' = 页面还没排好，稍后再判断
+  }
   const canvasEl = () => document.querySelector('.wr_horizontalReader .wr_canvasContainer canvas');
   function pageHash() {
     const c = canvasEl();
@@ -268,16 +276,18 @@ ${CTRL_CSS}
     }, 500);
   }
   // 统计翻页：点翻页按钮（包括点击左右区域、自动翻页、快捷键）和网页自带的方向键
+  let lastKeyTurn = 0;
   window.addEventListener('click', (e) => {
     const b = e.target.closest && e.target.closest('.renderTarget_pager_button');
     if (!b || restoring) return;
+    if (Date.now() - lastKeyTurn < 400) return;            // 这次点击是方向键引起的，已经计过
     pIdx = Math.max(0, pIdx + (b.classList.contains('renderTarget_pager_button_right') ? 1 : -1));
     rememberSoon();
   }, true);
   window.addEventListener('keydown', (e) => {
     if (restoring || !isHor() || e.target.closest('input, textarea, [contenteditable]')) return;
-    if (e.key === 'ArrowRight' || e.key === 'PageDown') { pIdx++; rememberSoon(); }
-    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { pIdx = Math.max(0, pIdx - 1); rememberSoon(); }
+    if (e.key === 'ArrowRight' || e.key === 'PageDown') { pIdx++; lastKeyTurn = Date.now(); rememberSoon(); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { pIdx = Math.max(0, pIdx - 1); lastKeyTurn = Date.now(); rememberSoon(); }
   }, true);
   window.addEventListener('scroll', () => { if (!isHor() && !restoring) rememberSoon(); }, { passive: true });
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -285,10 +295,15 @@ ${CTRL_CSS}
     for (let t = 0; t < maxMs; t += 100) { if (pageReady()) return true; await wait(100); }
     return false;
   }
+  let abortRestore = false;
+  for (const t of ['pointerdown', 'keydown', 'wheel']) {
+    window.addEventListener(t, (e) => { if (restoring && e.isTrusted) abortRestore = true; }, true);   // 用户一操作就停止自动恢复
+  }
   async function restorePos(k) {
     const saved = loadPos()[k];
     if (!saved) return;
-    restoring = true;
+    if (saved.mode === 'page' && (!(saved.i > 0) || saved.i > 60 || (saved.t && saved.i >= saved.t))) return;   // 第一页或记录异常：不恢复
+    restoring = true; abortRestore = false;
     try {
       if (saved.mode === 'scroll') {
         for (let t = 0; t < 6000 && isHor() === false; t += 200) {
@@ -305,7 +320,7 @@ ${CTRL_CSS}
       const t = totalPages();
       const target = sameSize || !saved.t || !t ? saved.i : Math.min(t - 1, Math.round(saved.i / saved.t * t));
       const btn = () => document.querySelector('.renderTarget_pager_button_right');
-      const limit = sameSize ? Math.max(target + 3, Math.round(target * 1.3) + 5) : target;
+      const limit = Math.min(60, target);
       for (let n = 0; n < limit; n++) {
         if (sameSize && pageHash() === saved.h) break;
         if (!sameSize && n >= target) break;
@@ -313,7 +328,7 @@ ${CTRL_CSS}
         const b = btn(); if (!b) break;
         b.click();
         for (let w = 0; w < 30; w++) { await wait(50); if (pageReady() && pageHash() !== before) break; }
-        if (chapKey() !== k) break;                            // 意外翻到了下一章，停止
+        if (abortRestore || chapKey() !== k) break;            // 用户操作了，或翻到了别的章节：停止
       }
       pIdx = target;
     } finally { restoring = false; }
@@ -333,12 +348,13 @@ ${CTRL_CSS}
     }, 500);
   });
   // 监测章节变化：从书架/首次打开进入某章时恢复位置；章节内前后翻到别的章节时从头计数
+  let readingSession = false;
   setInterval(() => {
+    if (!inReaderPath()) { readingSession = false; lastPath = null; return; }
     const k = chapKey();
-    if (k === lastPath) return;
-    const prev = lastPath; lastPath = k;
-    pIdx = 0;
-    if (k && !prev) restorePos(k);
+    if (!k || k === lastPath || restoring) return;          // 还没排好 / 没变化
+    lastPath = k; pIdx = 0;
+    if (!readingSession) { readingSession = true; restorePos(k); }   // 从书架进入或刚打开：恢复位置；书内换章：从头计数
   }, 300);
 
   window.__wrm = {
