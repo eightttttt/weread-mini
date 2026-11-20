@@ -45,12 +45,8 @@
   .grip svg { width: 10px; height: 16px; fill: currentColor; stroke: none; }
   .title { min-width: 48px; cursor: move; }
   .bar:hover .grip { color: #1b88ee; }
-  @media (max-width: 600px) { #op, .sep.o { display: none; } }
-  @media (max-width: 540px) { #reload { display: none; } }
-  @media (max-width: 360px) { #home { display: none; } }
-  @media (max-width: 480px) { #tone, #zv { display: none; } }
-  @media (max-width: 400px) { #fade, #min, #autoMore { display: none; } }
-  @media (max-width: 320px) { .group.zoom, #immersive { display: none; } }
+  /* 窗口变窄时按常用程度动态收起按钮（见下方脚本），收起的功能放进“⋯ 更多”菜单 */
+  #more { display: none; font-size: 15px; font-weight: 700; letter-spacing: -1px; }
 </style>
 </head>
 <body>
@@ -66,7 +62,7 @@
     <button id="zv" title="点击恢复 100% (Ctrl+0)">100%</button>
     <button id="zoomIn" class="aa-l" title="字体放大 (Ctrl +)">A+</button>
   </div>
-  <div class="group" title="自动翻页：点击开/停 (Alt+P)；鼠标滚轮调快慢 (Alt+[ / Alt+])；右侧小箭头更多设置">
+  <div class="group" id="autoGroup" title="自动翻页：点击开/停 (Alt+P)；鼠标滚轮调快慢 (Alt+[ / Alt+])；右侧小箭头更多设置">
     <button id="auto"><svg viewBox="0 0 24 24" id="autoIcon"><path d="M7 4l12 8-12 8z"/></svg><span id="autoText"></span></button>
     <button id="autoMore" title="自动翻页设置"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
   </div>
@@ -77,6 +73,7 @@
   <button id="fade" title="鼠标移开自动隐身（完全透明且不挡鼠标；托盘菜单可调隐身程度）"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
   <button id="pin" title="窗口置顶"><svg viewBox="0 0 24 24"><path d="M12 17v5"/><path d="M9 3h6l-1 6 3 3v2H7v-2l3-3z"/></svg></button>
   <button id="immersive" title="沉浸模式 (Ctrl+H)：工具栏自动隐藏，鼠标移到窗口顶部即出现"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+  <button id="more" title="更多功能（窗口太窄时收起的按钮在这里）">⋯</button>
   <button id="min" title="最小化"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
   <button id="close" class="close" title="隐藏到托盘 (Alt+Q 唤出)"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
 </div>
@@ -132,6 +129,45 @@
     });
   }
   window.api.onGlass((g) => document.body.classList.toggle('clear', !!g.clear));
+  // ---------- 按常用程度收起按钮 ----------
+  // 数字越小越不常用，窗口变窄时越先收起；拖动把手、书名、关闭永远显示
+  const PRIORITY = [
+    ['op', 10],          // 透明度滑块（有 Alt+↑/↓）
+    ['reload', 15],      // 刷新（有 F5）
+    ['min', 20],         // 最小化（和关闭一样都是收到托盘）
+    ['zv', 30],          // 字号百分比
+    ['back', 35],        // 后退
+    ['autoMore', 40],    // 自动翻页设置 ▾
+    ['home', 45],        // 书架（书页左下角另有按钮）
+    ['pin', 50],         // 置顶（一般设一次）
+    ['tone', 55],        // 色调
+    ['zoomGroup', 65],   // 字号 A− A+
+    ['immersive', 70],   // 沉浸模式
+    ['ticker', 80],      // 播报条
+    ['autoGroup', 85],   // 自动翻页 ▶
+    ['fade', 90],        // 鼠标移开隐身
+  ];
+  const elOf = (id) => id === 'zoomGroup' ? document.querySelector('.group.zoom') : $(id);
+  let hiddenIds = [];
+  function fitBar() {
+    const bar = document.querySelector('.bar'), title = $('title');
+    PRIORITY.forEach(([id]) => { elOf(id).style.display = ''; });
+    document.querySelector('.sep.o').style.display = '';
+    $('more').style.display = 'none';
+    hiddenIds = [];
+    const crowded = () => bar.scrollWidth > bar.clientWidth + 1 || title.clientWidth < 56;
+    for (const [id] of PRIORITY) {
+      if (!crowded()) break;
+      if (!hiddenIds.length) $('more').style.display = 'grid';   // 先腾出“⋯”的位置
+      elOf(id).style.display = 'none';
+      if (id === 'op') document.querySelector('.sep.o').style.display = 'none';
+      hiddenIds.push(id);
+    }
+  }
+  window.addEventListener('resize', fitBar);
+  $('more').addEventListener('click', () => window.api.cmd('more', hiddenIds));
+  setTimeout(fitBar, 0);
+
   window.api.onState((s) => {
     $('pin').classList.toggle('on', s.onTop);
     $('fade').classList.toggle('on', s.fade);
@@ -146,6 +182,7 @@
     if (!flashT || !$('title').classList.contains('flash')) $('title').textContent = s.title;
     $('title').title = s.title;
     if (document.activeElement !== $('op')) $('op').value = Math.round(s.opacity * 100);
+    fitBar();
   });
 </script>
 </body>

@@ -679,6 +679,43 @@ async function closePanelOrImmersive(onlyPanel) {
   if (!onlyPanel && !cfg.showBar) setImmersive(false);
 }
 
+// “⋯ 更多”菜单：窗口太窄时被收起的工具栏按钮，按工具栏上的顺序列出
+function moreMenu(hidden) {
+  const has = (id) => hidden.includes(id);
+  const items = [];
+  if (has('back')) items.push({ label: '后退', enabled: page.webContents.navigationHistory.canGoBack(), click: () => page.webContents.navigationHistory.goBack() });
+  if (has('home')) items.push({ label: '返回书架', click: () => page.webContents.loadURL(HOME + 'web/shelf') });
+  if (has('reload')) items.push({ label: '刷新', accelerator: 'F5', click: () => page.webContents.reload() });
+  if (has('zoomGroup') || has('zv')) {
+    if (items.length) items.push({ type: 'separator' });
+    if (has('zoomGroup')) {
+      items.push({ label: '字体放大', accelerator: 'CmdOrCtrl+=', click: () => zoomStep(1) });
+      items.push({ label: '字体缩小', accelerator: 'CmdOrCtrl+-', click: () => zoomStep(-1) });
+    }
+    items.push({ label: `恢复字体大小（当前 ${Math.round(cfg.zoom * 100)}%）`, accelerator: 'CmdOrCtrl+0', click: () => setZoom(1) });
+  }
+  if (has('autoGroup') || has('autoMore')) {
+    if (items.length) items.push({ type: 'separator' });
+    if (has('autoGroup')) items.push({ label: autoOn ? '停止自动翻页' : '开始自动翻页', accelerator: 'Alt+P', click: () => setAuto(!autoOn) });
+    items.push({ label: '自动翻页设置', submenu: autoMenu() });
+  }
+  if (has('ticker')) items.push({ label: ticker.on ? '退出播报条' : '播报条（单行滚动）', accelerator: 'Alt+L', click: toggleTicker });
+  if (has('tone')) items.push({ label: `阅读色调（${TONES[cfg.tone].label}）`, submenu: toneMenu() });
+  if (has('op')) items.push({ label: `窗口不透明度（${Math.round(cfg.opacity * 100)}%）`, submenu: [100, 90, 80, 70, 60, 50, 40, 30].map((v) => ({
+    label: `${v}%`, type: 'radio', checked: Math.round(cfg.opacity * 100) === v,
+    click: () => { cfg.opacity = v / 100; applyOpacity(); saveCfg(); sendState(); },
+  })) });
+  if (has('fade') || has('pin') || has('immersive')) {
+    items.push({ type: 'separator' });
+    if (has('fade')) items.push({ label: '鼠标移开自动隐身', type: 'checkbox', checked: cfg.fade, click: (i) => setFade(i.checked) });
+    if (has('pin')) items.push({ label: '窗口置顶', type: 'checkbox', checked: cfg.onTop, click: (i) => setOnTop(i.checked) });
+    if (has('immersive')) items.push({ label: '沉浸模式（工具栏自动隐藏）', type: 'checkbox', checked: !cfg.showBar, accelerator: 'CmdOrCtrl+H', click: (i) => setImmersive(i.checked) });
+  }
+  if (has('min')) { items.push({ type: 'separator' }); items.push({ label: '隐藏到托盘', click: hideToTray }); }
+  if (!items.length) return;
+  Menu.buildFromTemplate(items).popup({ window: win, x: Math.max(0, win.getContentBounds().width - 220), y: BAR_H });
+}
+
 // ---------- 工具栏事件 ----------
 ipcMain.on('cmd', (_e, cmd, val) => {
   if (!alive()) return;
@@ -695,6 +732,7 @@ ipcMain.on('cmd', (_e, cmd, val) => {
     case 'switchMode': switchReadMode(); return;
     case 'auto': setAuto(!autoOn); return;
     case 'ticker': toggleTicker(); return;
+    case 'more': moreMenu(Array.isArray(val) ? val : []); return;
     case 'autoFaster': autoAdjust(1); return;
     case 'autoSlower': autoAdjust(-1); return;
     case 'autoMenu': Menu.buildFromTemplate(autoMenu()).popup({ window: win }); return;
