@@ -12,8 +12,8 @@
     box-shadow: inset 0 1px 0 rgba(255,255,255,.10), inset 0 0 0 1px rgba(255,255,255,.06); }
   body.clear #strip { background: transparent; box-shadow: none; }
   #strip.dragging { cursor: grabbing; }
-  /* 文字只在按钮右侧这块区域里滚动，不从按钮下面穿过 */
-  #clip { position: absolute; top: 0; bottom: 0; right: 0; left: 120px; overflow: hidden; }
+  /* 文字占满整条播报条 */
+  #clip { position: absolute; top: 0; bottom: 0; right: 0; left: 8px; overflow: hidden; }
   #track { position: absolute; top: 0; bottom: 0; left: 0; display: flex; align-items: center; white-space: nowrap;
     will-change: transform; color: #ececec; font-family: "Microsoft YaHei UI", "PingFang SC", sans-serif; }
   body.clear #track { color: #fff; text-shadow: 0 0 2px #000, 0 0 3px #000, 0 1px 2px rgba(0,0,0,.9); }
@@ -27,11 +27,12 @@
     background: rgba(27,136,238,.92); color: #fff; font: 12px "Microsoft YaHei UI", "PingFang SC", sans-serif; opacity: 0;
     transition: opacity .2s; pointer-events: none; white-space: nowrap; }
   #tip.show { opacity: 1; }
-  /* 左侧控制按钮：暂停 / 继续、字号 A− / A+、背景切换、减速 / 加速。透明背景时平时很淡，鼠标移上去才清晰 */
+  /* 左侧控制按钮：暂停 / 继续、字号 A− / A+、背景切换、加速 / 减速。平时隐藏，鼠标移到播报条上才出现 */
   #ctl { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); z-index: 5; display: flex; gap: 2px;
     padding: 2px; border-radius: 8px; background: rgba(20,20,22,.55); transition: opacity .15s, background .15s; }
-  body.clear #ctl { opacity: .3; background: rgba(20,20,22,.35); }
-  #ctl:hover, body.clear #ctl:hover { opacity: 1; background: rgba(20,20,22,.85); }
+  /* 平时完全隐藏，鼠标移到播报条上才出现，叠在文字上方 */
+  #ctl { opacity: 0; pointer-events: none; background: rgba(20,20,22,.88); box-shadow: 0 1px 6px rgba(0,0,0,.35); }
+  #strip:hover #ctl { opacity: 1; pointer-events: auto; }
   #ctl button { width: 24px; height: 22px; border: 0; border-radius: 6px; background: transparent; color: #eee; cursor: pointer;
     display: grid; place-items: center; font: 700 11px "Microsoft YaHei UI", "PingFang SC", sans-serif; padding: 0; }
   #ctl button:hover { background: rgba(255,255,255,.18); }
@@ -54,8 +55,8 @@
     <button id="fplus" class="big" title="字号放大 (Ctrl +)">A+</button>
     <button id="bg" title="背景：透明 / 深色"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18V3z"/><path d="M12 3a9 9 0 0 1 0 18" fill="none" stroke="currentColor" stroke-width="2"/></svg></button>
     <span class="sep"></span>
-    <button id="sminus" class="txt" title="减慢（Alt+[，或在播报条上向下滚动滚轮）">慢</button>
     <button id="splus" class="txt" title="加快（Alt+]，或在播报条上向上滚动滚轮）">快</button>
+    <button id="sminus" class="txt" title="减慢（Alt+[，或在播报条上向下滚动滚轮）">慢</button>
   </div>
   <div id="tip"></div>
   <div id="resize" title="拖动调整宽度"></div>
@@ -68,8 +69,6 @@
   let paused = false, last = performance.now(), asked = false;
 
   function setFont(px) { track.style.fontSize = px + 'px'; }
-  function placeClip() { clip.style.left = ($('ctl').offsetLeft + $('ctl').offsetWidth + 10) + 'px'; }
-  window.addEventListener('resize', placeClip); setTimeout(placeClip, 0);
   setFont(18);
 
   function addSeg(text, id) {
