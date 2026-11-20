@@ -6,6 +6,24 @@ const { ipcRenderer, webFrame } = require('electron');
 // 只做记录，不改变网页的任何显示。
 webFrame.executeJavaScript(`(() => {
   window.__wrmInitDpr = window.devicePixelRatio;   // 网页启动时的缩放比例（微信读书只在启动时读取一次）
+  // 微信读书用正文容器的 offsetTop/offsetLeft 把鼠标位置换算成文字位置，
+  // 但小窗为了收窄边距把外层容器上移、加宽了，offsetTop/offsetLeft 不包含这部分位移，
+  // 划线就会选到鼠标上方的文字。这里让正文容器报告它在页面上的真实位置。
+  if (!HTMLElement.prototype.__wrmOffPatched) {
+    HTMLElement.prototype.__wrmOffPatched = true;
+    const H = HTMLElement.prototype;
+    const oTop = Object.getOwnPropertyDescriptor(H, 'offsetTop');
+    const oLeft = Object.getOwnPropertyDescriptor(H, 'offsetLeft');
+    const isRT = (el) => el.classList && el.classList.contains('renderTargetContainer');
+    Object.defineProperty(H, 'offsetTop', { configurable: true, get() {
+      if (isRT(this) && this.isConnected) return this.getBoundingClientRect().top + window.scrollY;
+      return oTop.get.call(this);
+    } });
+    Object.defineProperty(H, 'offsetLeft', { configurable: true, get() {
+      if (isRT(this) && this.isConnected) return this.getBoundingClientRect().left + window.scrollX;
+      return oLeft.get.call(this);
+    } });
+  }
   const P = CanvasRenderingContext2D.prototype;
   if (P.__wrmHooked) return;
   P.__wrmHooked = true;
