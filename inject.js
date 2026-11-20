@@ -39,8 +39,13 @@ html.wrm-open .readerControls{visibility:visible!important;opacity:1!important;p
 #__wrm_tg{right:7px}
 #__wrm_shelf{left:7px}
 #__wrm_tg:hover,#__wrm_shelf:hover,html.wrm-open #__wrm_tg{opacity:1;background:rgba(40,40,44,.85);color:#e8e8e8;box-shadow:0 1px 6px rgba(0,0,0,.3)}
-#__wrm_tg svg,#__wrm_shelf svg{width:58%;height:58%;fill:none;stroke:currentColor;stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round}
-html:not(.wrm-has-ctrl) #__wrm_shelf,html:not(.wrm-has-ctrl) #__wrm_tg{display:none}
+#__wrm_tg svg,#__wrm_shelf svg{width:64%;height:64%;fill:none;stroke:currentColor;stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round}
+/* 底部中间的进度：当前页 / 本章总页数（上下滚动模式显示本章百分比） */
+#__wrm_prog{position:fixed;left:50%;bottom:7px;transform:translateX(-50%);z-index:1001;pointer-events:none;
+  height:var(--wrm-b,26px);line-height:var(--wrm-b,26px);padding:0 6px;white-space:nowrap;
+  font:600 calc(var(--wrm-b,26px) * .5) "Microsoft YaHei UI","PingFang SC",sans-serif;font-variant-numeric:tabular-nums;
+  color:#8a8c90;opacity:.35;text-shadow:0 0 2px rgba(0,0,0,.25)}
+html:not(.wrm-has-ctrl) #__wrm_prog,html:not(.wrm-has-ctrl) #__wrm_shelf,html:not(.wrm-has-ctrl) #__wrm_tg{display:none}
 /* 划线/想法/书友想法等弹窗：固定在窗口内，宽度随窗口，过高时内部滚动，底部留出可点击关闭的空白 */
 .reader_float_panel_container{position:fixed!important;left:8px!important;right:8px!important;top:8px!important;bottom:auto!important;
   width:auto!important;min-width:0!important;max-width:none!important;max-height:calc(100vh - 16px)!important;overflow:auto!important;
@@ -79,9 +84,11 @@ ${CTRL_CSS}
     if (document.documentElement.style.getPropertyValue('--wrm-s') !== v) document.documentElement.style.setProperty('--wrm-s', v);
   }
   function fitButtons() {
-    // 按窗口实际大小计算：20~30 像素；页面放大/缩小（字体大小）时反向抵消，按钮在屏幕上的大小不变
+    // 主要按窗口宽度计算：22~34 像素（窗口越宽按钮越大）；窗口很矮时最大 26；
+    // 页面放大/缩小（字体大小）时反向抵消，按钮在屏幕上的大小只跟窗口有关
     const z = window.__wrmZoom || 1;
-    const phys = Math.max(20, Math.min(30, Math.min(innerWidth, innerHeight) * z * 0.055));
+    const w = innerWidth * z, h = innerHeight * z;
+    const phys = Math.max(22, Math.min(h < 160 ? 26 : 34, w * 0.045));
     const b = Math.round(phys / z);
     document.documentElement.style.setProperty('--wrm-b', b + 'px');
     BTN = b;
@@ -162,6 +169,25 @@ ${CTRL_CSS}
       return cs.pointerEvents !== 'none' && cs.visibility !== 'hidden' && cs.display !== 'none';
     });
   }
+  function updateProgress() {
+    let el = document.getElementById('__wrm_prog');
+    if (!el && document.body) { el = document.createElement('div'); el.id = '__wrm_prog'; document.body.appendChild(el); }
+    if (!el) return;
+    let txt = '';
+    if (isHor()) {
+      const t = totalPages();
+      if (t) {
+        if (landOnLast) { pIdx = t - 1; landOnLast = false; }
+        txt = `${Math.min(pIdx + 1, t)} / ${t}`;
+      }
+    } else if (document.querySelector('.readerContent')) {
+      const se = document.scrollingElement, max = se.scrollHeight - innerHeight;
+      if (max > 0) txt = Math.round(Math.min(1, se.scrollTop / max) * 100) + '%';
+    }
+    if (el.textContent !== txt) el.textContent = txt;
+  }
+  setInterval(updateProgress, 300);
+
   function ensureExtras() {
     root.classList.toggle('wrm-panel', maskOpen());
     root.classList.toggle('wrm-dark', /wr_theme=dark/.test(document.cookie));   // 透明背景时按主题选择文字描边颜色
@@ -279,18 +305,19 @@ ${CTRL_CSS}
     }, 500);
   }
   // 统计翻页：点翻页按钮（包括点击左右区域、自动翻页、快捷键）和网页自带的方向键
-  let lastKeyTurn = 0;
+  let lastKeyTurn = 0, lastTurnDir = 0, landOnLast = false;
   window.addEventListener('click', (e) => {
     const b = e.target.closest && e.target.closest('.renderTarget_pager_button');
     if (!b || restoring) return;
     if (Date.now() - lastKeyTurn < 400) return;            // 这次点击是方向键引起的，已经计过
-    pIdx = Math.max(0, pIdx + (b.classList.contains('renderTarget_pager_button_right') ? 1 : -1));
+    lastTurnDir = b.classList.contains('renderTarget_pager_button_right') ? 1 : -1;
+    pIdx = Math.max(0, pIdx + lastTurnDir);
     rememberSoon();
   }, true);
   window.addEventListener('keydown', (e) => {
     if (restoring || !isHor() || e.target.closest('input, textarea, [contenteditable]')) return;
-    if (e.key === 'ArrowRight' || e.key === 'PageDown') { pIdx++; lastKeyTurn = Date.now(); rememberSoon(); }
-    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { pIdx = Math.max(0, pIdx - 1); lastKeyTurn = Date.now(); rememberSoon(); }
+    if (e.key === 'ArrowRight' || e.key === 'PageDown') { lastTurnDir = 1; pIdx++; lastKeyTurn = Date.now(); rememberSoon(); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { lastTurnDir = -1; pIdx = Math.max(0, pIdx - 1); lastKeyTurn = Date.now(); rememberSoon(); }
   }, true);
   window.addEventListener('scroll', () => { if (!isHor() && !restoring) rememberSoon(); }, { passive: true });
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -357,6 +384,7 @@ ${CTRL_CSS}
     const k = chapKey();
     if (!k || k === lastPath || restoring) return;          // 还没排好 / 没变化
     lastPath = k; pIdx = 0;
+    landOnLast = readingSession && lastTurnDir < 0;      // 往前翻进上一章：网页停在上一章最后一页
     if (!readingSession) { readingSession = true; restorePos(k); }   // 从书架进入或刚打开：恢复位置；书内换章：从头计数
   }, 300);
 
