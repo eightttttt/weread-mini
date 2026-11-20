@@ -8,7 +8,7 @@
   let pad = 70;        // 微信读书翻页模式内置的左右留白，会自动校准
   let tries = 0;
   let pt = 84, pb = 70;  // 翻页模式正文上下内置留白（顶部书名/章节名行、底部翻页按钮），会自动读取
-  let BTN = 26;          // 右上角 ☰ / 左上角书架按钮的边长，随窗口大小在 20~30px 之间变化
+  let BTN = 26;          // 右下角 ☰ / 左下角书架按钮的边长，随窗口大小在 20~30px 之间变化
   const T = 12;          // 正文离窗口上边缘的距离（按钮叠在文字上方，不再单独占一行）
   const B = 10;          // 正文离窗口下边缘的距离
   const st = document.createElement('style');
@@ -20,7 +20,7 @@
   // 右侧功能栏改为收纳式：平时隐藏，点右上角“☰”按钮展开
   const CTRL_CSS = `
 .readerControls{display:flex!important;flex-direction:column!important;position:fixed!important;left:auto!important;right:6px!important;
-  top:calc(var(--wrm-b,26px) + 12px)!important;bottom:auto!important;transform:scale(var(--wrm-s,1))!important;transform-origin:top right!important;margin:0!important;
+  top:auto!important;bottom:calc(var(--wrm-b,26px) + 14px)!important;transform:scale(var(--wrm-s,1))!important;transform-origin:bottom right!important;margin:0!important;
   z-index:1000!important;padding:4px!important;border-radius:14px!important;background:rgba(128,128,128,.16)!important;
   backdrop-filter:blur(8px);box-shadow:0 4px 16px rgba(0,0,0,.25)!important;
   visibility:hidden!important;opacity:0!important;pointer-events:none!important;transition:opacity .12s!important}
@@ -29,12 +29,12 @@ html.wrm-open .readerControls{visibility:visible!important;opacity:1!important;p
 .readerControls .wr_tooltip_item{left:auto!important;right:calc(100% + 8px)!important;top:50%!important;transform:translateY(-50%) scale(calc(1 / var(--wrm-s,1)))!important;transform-origin:right center!important;
   background:rgba(32,33,36,.95)!important;color:#fff!important;padding:5px 10px!important;border-radius:6px!important;
   font-size:13px!important;line-height:1.4!important;white-space:nowrap!important;box-shadow:0 2px 8px rgba(0,0,0,.35)!important;pointer-events:none!important}
-/* 右上角 ☰ 菜单按钮、左上角返回书架按钮：大小随窗口变化（20~30px） */
-#__wrm_tg,#__wrm_shelf{position:fixed;top:3px;width:var(--wrm-b,26px);height:var(--wrm-b,26px);z-index:1001;border:0;
+/* 右下角 ☰ 菜单按钮、左下角返回书架按钮：大小随窗口变化（20~30px） */
+#__wrm_tg,#__wrm_shelf{position:fixed;top:auto;bottom:7px;width:var(--wrm-b,26px);height:var(--wrm-b,26px);z-index:1001;border:0;
   border-radius:calc(var(--wrm-b,26px) * .27);padding:0;margin:0;display:grid;place-items:center;cursor:pointer;
   background:transparent;color:#8a8c90;opacity:.2;transition:opacity .12s,background .12s}
-#__wrm_tg{right:3px}
-#__wrm_shelf{left:3px}
+#__wrm_tg{right:7px}
+#__wrm_shelf{left:7px}
 #__wrm_tg:hover,#__wrm_shelf:hover,html.wrm-open #__wrm_tg{opacity:1;background:rgba(40,40,44,.85);color:#e8e8e8;box-shadow:0 1px 6px rgba(0,0,0,.3)}
 #__wrm_tg svg,#__wrm_shelf svg{width:58%;height:58%;fill:none;stroke:currentColor;stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round}
 html:not(.wrm-has-ctrl) #__wrm_shelf,html:not(.wrm-has-ctrl) #__wrm_tg{display:none}

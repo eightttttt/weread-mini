@@ -25,7 +25,7 @@ for (const t of ['mousedown', 'mouseup', 'click']) {
 }
 
 // 右下角拖动调整窗口大小（窗口是透明的，部分系统上不能拖边框调大小）
-const CORNER = 18;
+const CORNER = 7;    // 只占最角落 7px，☰ 按钮在它内侧，互不干扰
 let resizing = false;
 const inCorner = (e) => e.clientX >= innerWidth - CORNER && e.clientY >= innerHeight - CORNER;
 window.addEventListener('pointermove', (e) => {
