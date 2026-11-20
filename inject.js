@@ -40,12 +40,7 @@ html.wrm-open .readerControls{visibility:visible!important;opacity:1!important;p
 #__wrm_shelf{left:7px}
 #__wrm_tg:hover,#__wrm_shelf:hover,html.wrm-open #__wrm_tg{opacity:1;background:rgba(40,40,44,.85);color:#e8e8e8;box-shadow:0 1px 6px rgba(0,0,0,.3)}
 #__wrm_tg svg,#__wrm_shelf svg{width:64%;height:64%;fill:none;stroke:currentColor;stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round}
-/* 底部中间的进度：当前页 / 本章总页数（上下滚动模式显示本章百分比） */
-#__wrm_prog{position:fixed;left:50%;bottom:7px;transform:translateX(-50%);z-index:1001;pointer-events:none;
-  height:var(--wrm-b,26px);line-height:var(--wrm-b,26px);padding:0 6px;white-space:nowrap;
-  font:600 calc(var(--wrm-b,26px) * .5) "Microsoft YaHei UI","PingFang SC",sans-serif;font-variant-numeric:tabular-nums;
-  color:#8a8c90;opacity:.35;text-shadow:0 0 2px rgba(0,0,0,.25)}
-html:not(.wrm-has-ctrl) #__wrm_prog,html:not(.wrm-has-ctrl) #__wrm_shelf,html:not(.wrm-has-ctrl) #__wrm_tg{display:none}
+html:not(.wrm-has-ctrl) #__wrm_shelf,html:not(.wrm-has-ctrl) #__wrm_tg{display:none}
 /* 划线/想法/书友想法等弹窗：固定在窗口内，宽度随窗口，过高时内部滚动，底部留出可点击关闭的空白 */
 .reader_float_panel_container{position:fixed!important;left:8px!important;right:8px!important;top:8px!important;bottom:auto!important;
   width:auto!important;min-width:0!important;max-width:none!important;max-height:calc(100vh - 16px)!important;overflow:auto!important;
@@ -169,10 +164,10 @@ ${CTRL_CSS}
       return cs.pointerEvents !== 'none' && cs.visibility !== 'hidden' && cs.display !== 'none';
     });
   }
+  // 阅读进度（当前页 / 本章总页数），显示在工具栏书名后面
+  let progText = '';
   function updateProgress() {
-    let el = document.getElementById('__wrm_prog');
-    if (!el && document.body) { el = document.createElement('div'); el.id = '__wrm_prog'; document.body.appendChild(el); }
-    if (!el) return;
+    document.getElementById('__wrm_prog')?.remove();       // 清理旧版本放在页面上的进度
     let txt = '';
     if (isHor()) {
       const t = totalPages();
@@ -184,7 +179,7 @@ ${CTRL_CSS}
       const se = document.scrollingElement, max = se.scrollHeight - innerHeight;
       if (max > 0) txt = Math.round(Math.min(1, se.scrollTop / max) * 100) + '%';
     }
-    if (el.textContent !== txt) el.textContent = txt;
+    progText = txt;
   }
   setInterval(updateProgress, 300);
 
@@ -396,6 +391,7 @@ ${CTRL_CSS}
     scroll: (s) => startScroll(s),
     // “切换阅读方式”按钮的位置（网页要求真实点击，由主进程模拟鼠标点击）
     panelOpen: () => maskOpen(),
+    progress: () => progText,
     tickerHide: (on) => { root.classList.toggle('wrm-ticker', !!on); return true; },
     // 播报条：当前页的文字（按行排好，段落之间用全角空格隔开）
     pageText: () => {

@@ -442,6 +442,13 @@ function createWindow() {
   wc.on('did-navigate-in-page', onNav);
   wc.on('dom-ready', () => { toneKey = null; appliedScroll = 0; wc.setZoomFactor(cfg.zoom); applyTone(); inject(); });
   wc.on('page-title-updated', sendState);
+  // 阅读进度显示在工具栏书名后面
+  let lastProg = null;
+  setInterval(async () => {
+    if (!alive() || !barAlive()) return;
+    const t = isReader() ? (await pageJS('window.__wrm && window.__wrm.progress ? window.__wrm.progress() : ""')) || '' : '';
+    if (t !== lastProg) { lastProg = t; bar.webContents.send('prog', t); }
+  }, 400);
   wc.on('zoom-changed', (_e, dir) => zoomStep(dir === 'in' ? 1 : -1));   // Ctrl + 滚轮
   wc.on('context-menu', pageContextMenu);
   wc.on('before-input-event', handleKeys);

@@ -46,6 +46,10 @@
   .title { min-width: 48px; cursor: move; }
   .bar:hover .grip { color: #1b88ee; }
   /* 窗口变窄时按常用程度动态收起按钮（见下方脚本），收起的功能放进“⋯ 更多”菜单 */
+  /* 书名后面的阅读进度：当前页 / 本章总页数 */
+  #prog { flex-shrink: 0; padding: 0 6px 0 0; margin-left: -2px; font-size: 11px; font-weight: 600; color: #374151;
+    font-variant-numeric: tabular-nums; white-space: nowrap; cursor: move; }
+  #prog:empty { display: none; }
   #more { display: none; font-size: 15px; font-weight: 700; letter-spacing: -1px; }
 </style>
 </head>
@@ -56,6 +60,7 @@
   <button id="home" title="返回书架"><svg viewBox="0 0 24 24"><path d="M4 19V5a1 1 0 0 1 1-1h3v15M8 4h3v15M14 6l3-1 4 13-3 1z"/><path d="M3 20h18"/></svg></button>
   <button id="reload" title="刷新 (F5)"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg></button>
   <div class="title" id="title" title="按住拖动窗口">微信读书</div>
+  <span id="prog" title="当前页 / 本章总页数"></span>
 
   <div class="group zoom" title="字体大小：Ctrl + 加号/减号，Ctrl + 滚轮，Ctrl+0 恢复">
     <button id="zoomOut" class="aa-s" title="字体缩小 (Ctrl -)">A−</button>
@@ -146,6 +151,7 @@
     ['ticker', 80],      // 播报条
     ['autoGroup', 85],   // 自动翻页 ▶
     ['fade', 90],        // 鼠标移开隐身
+    ['prog', 95],        // 阅读进度（最后才收起）
   ];
   const elOf = (id) => id === 'zoomGroup' ? document.querySelector('.group.zoom') : $(id);
   let hiddenIds = [];
@@ -168,6 +174,7 @@
   $('more').addEventListener('click', () => window.api.cmd('more', hiddenIds));
   setTimeout(fitBar, 0);
 
+  window.api.onProg((t) => { $('prog').textContent = t; fitBar(); });
   window.api.onState((s) => {
     $('pin').classList.toggle('on', s.onTop);
     $('fade').classList.toggle('on', s.fade);
