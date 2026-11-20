@@ -411,7 +411,7 @@ function createWindow() {
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false },
   });
   page = new WebContentsView({
-    webPreferences: { partition: 'persist:weread', preload: path.join(__dirname, 'page-preload.js'), contextIsolation: true, nodeIntegration: false, spellcheck: false, backgroundThrottling: false },
+    webPreferences: { partition: 'persist:weread', preload: path.join(__dirname, 'page-preload.js'), zoomFactor: cfg.zoom, contextIsolation: true, nodeIntegration: false, spellcheck: false, backgroundThrottling: false },
   });
   win.contentView.addChildView(page);
   win.contentView.addChildView(bar);   // 后加入 → 悬浮在书页之上

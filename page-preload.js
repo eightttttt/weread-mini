@@ -5,6 +5,7 @@ const { ipcRenderer, webFrame } = require('electron');
 // 在网页脚本运行前，记录它画到画布上的每个字（微信读书正文是一个字一个字画上去的），供“播报条”读取当前页文字。
 // 只做记录，不改变网页的任何显示。
 webFrame.executeJavaScript(`(() => {
+  window.__wrmInitDpr = window.devicePixelRatio;   // 网页启动时的缩放比例（微信读书只在启动时读取一次）
   const P = CanvasRenderingContext2D.prototype;
   if (P.__wrmHooked) return;
   P.__wrmHooked = true;

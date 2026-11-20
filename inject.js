@@ -284,6 +284,18 @@ ${CTRL_CSS}
   }
   const pageReady = () => { const ct = document.querySelector('.wr_horizontalReader .renderTargetContainer'); const c = canvasEl(); return !!(ct && ct.getClientRects().length && c && c.getBoundingClientRect().width > 50); };
   let pIdx = 0, restoring = false, lastPath = null, saveTimer2 = null;
+  function rememberNow() {
+    const k = chapKey(); if (!k || restoring) return;
+    const m = loadPos();
+    if (isHor()) {
+      if (!pageReady()) return;
+      m[k] = { mode: 'page', i: pIdx, t: totalPages(), h: pageHash(), w: innerWidth, hh: innerHeight, ts: Date.now() };
+    } else {
+      const el = document.scrollingElement;
+      m[k] = { mode: 'scroll', f: el.scrollHeight ? el.scrollTop / el.scrollHeight : 0, ts: Date.now() };
+    }
+    savePosMap(m);
+  }
   function rememberSoon() {
     clearTimeout(saveTimer2);
     saveTimer2 = setTimeout(() => {
@@ -372,6 +384,22 @@ ${CTRL_CSS}
       rememberSoon();
     }, 500);
   });
+  // ---------- 缩放比例变化后重新加载（修复划线/选字对不上行） ----------
+  // 微信读书只在页面启动时读取一次屏幕缩放比例（devicePixelRatio）。之后比例一变（调字体大小、
+  // 把窗口拖到缩放不同的显示器），画出来的字和它记录的文字位置就对不上，划线会落到别的行。
+  // 这里在比例稳定 0.9 秒后，先记住当前读到的页，再重新加载页面，加载后自动翻回这一页。
+  let dprSince = 0;
+  setInterval(() => {
+    const init = window.__wrmInitDpr;
+    if (!init || restoring || !inReaderPath()) { dprSince = 0; return; }
+    if (Math.abs(window.devicePixelRatio - init) < 0.01) { dprSince = 0; return; }
+    if (!dprSince) { dprSince = Date.now(); return; }
+    if (Date.now() - dprSince < 900) return;
+    window.__wrmInitDpr = window.devicePixelRatio;          // 防止重复触发
+    rememberNow();
+    location.reload();
+  }, 300);
+
   // 监测章节变化：从书架/首次打开进入某章时恢复位置；章节内前后翻到别的章节时从头计数
   let readingSession = false;
   setInterval(() => {
