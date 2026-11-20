@@ -9,7 +9,8 @@
   let tries = 0;
   let pt = 84, pb = 70;  // 翻页模式正文上下内置留白（顶部书名/章节名行、底部翻页按钮），会自动读取
   let BTN = 26;          // 右下角 ☰ / 左下角书架按钮的边长，随窗口大小在 20~30px 之间变化
-  const T = 12;          // 正文离窗口上边缘的距离（按钮叠在文字上方，不再单独占一行）
+  let T = 12;            // 正文离窗口上边缘的距离（按钮叠在文字上方，不再单独占一行）
+  let topDip = window.__wrmTopDip || 0;   // 圆角窗口：书页顶部有几像素藏在工具栏下面，正文相应下移
   const B = 10;          // 正文离窗口下边缘的距离
   const st = document.createElement('style');
   st.id = '__wrm_css';
@@ -47,6 +48,7 @@ html:not(.wrm-has-ctrl) #__wrm_shelf,html:not(.wrm-has-ctrl) #__wrm_tg{display:n
   transform:none!important;margin:0!important;box-sizing:border-box!important}
 .reader_floatReviewsPanel_content_arrow{display:none!important}`;
   function css() {
+    T = 12 + Math.round(topDip / (window.__wrmZoom || 1));
     if (M < 0) { st.textContent = CTRL_CSS; return; }
     st.textContent = `
 /* 翻页模式：把内容区加宽，让内置留白落到窗口外 */
@@ -413,6 +415,7 @@ ${CTRL_CSS}
 
   window.__wrm = {
     setMargin(m) { M = m; css(); relayout(); },
+    setTop(px) { window.__wrmTopDip = px; if (px === topDip) return; topDip = px; css(); relayout(); },
     mode: () => (isHor() ? 'page' : 'scroll'),
     next: () => nextPage(),
     prev: () => prevPage(),
@@ -456,7 +459,7 @@ ${CTRL_CSS}
       await new Promise((r) => setTimeout(r, 700));
       return true;
     },
-    setUiZoom: (z) => { window.__wrmZoom = z || 1; fitButtons(); },
+    setUiZoom: (z) => { const ch = (z || 1) !== window.__wrmZoom; window.__wrmZoom = z || 1; fitButtons(); if (ch && topDip) css(); },
     toggleRect: () => {
       const b = document.querySelector('.readerControls_item.isHorizontalReader, .readerControls_item.isNormalReader');
       if (!b) return null;

@@ -7,6 +7,7 @@ const fs = require('fs');
 
 const HOME = 'https://weread.qq.com/';
 const BAR_H = 30;
+const RADIUS = 8;    // 圆角窗口的圆角半径（像素）
 const IS_MAC = process.platform === 'darwin';
 const ALT = IS_MAC ? '⌥' : 'Alt+';   // 菜单/提示里显示的快捷键写法
 const MARGINS_OK = [-1, 32, 16, 8, 2];
@@ -38,7 +39,7 @@ if (!app.requestSingleInstanceLock()) { app.quit(); process.exit(0); }
 // ---------- 设置持久化 ----------
 const cfgFile = () => path.join(app.getPath('userData'), 'settings.json');
 const defaults = {
-  bounds: null, opacity: 1, onTop: true, fade: false, fadeLevel: 0, autoInterval: 30, autoSpeed: 40, margin: 16, tickerSpeed: 60, tickerH: 40, tickerFont: 18, tickerClear: true,
+  bounds: null, opacity: 1, onTop: true, fade: false, fadeLevel: 0, autoInterval: 30, autoSpeed: 40, margin: 16, tickerSpeed: 60, tickerH: 40, tickerFont: 18, tickerClear: true, round: true,
   lastUrl: HOME, showBar: true, zoom: 1, tone: 'none',
 };
 let cfg = { ...defaults };
@@ -88,12 +89,24 @@ function layout() {
   const top = cfg.showBar ? BAR_H : 0;
   bar.setBounds({ x: 0, y: 0, width, height: BAR_H });
   bar.setVisible(cfg.showBar || peek);
-  page.setBounds({ x: 0, y: top, width, height: Math.max(0, height - top) });
+  // 圆角：书页四角圆角；工具栏显示时书页顶部多出 RADIUS 像素藏在工具栏下面，把书页的上圆角遮住（正文同步下移，位置不变）
+  const ov = cfg.round && top ? RADIUS : 0;
+  page.setBounds({ x: 0, y: top - ov, width, height: Math.max(0, height - top + ov) });
+  try { page.setBorderRadius(cfg.round ? RADIUS : 0); } catch {}
+  setPageTop(ov);
 }
 
 // 调整窗口大小过程中只先调工具栏，书页等停止拖动 350ms 后再一次性调整：
 // 网页每变一次大小就会重新分页，连续几十次重排会丢失阅读位置（跳回章节开头）
 let resizeTimer = null;
+let pageTop = 0;
+function setPageTop(px) {
+  if (px === pageTop) return;
+  pageTop = px;
+  pageJS(`window.__wrmTopDip = ${px}; window.__wrm && window.__wrm.setTop(${px});`);
+}
+function setRound(on) { cfg.round = on; layout(); applyMaterial(); saveCfg(); refreshTrayMenu(); }
+
 function layoutDeferred() {
   if (!alive()) return;
   if (ticker.on) { layout(); return; }
@@ -162,12 +175,13 @@ function setTone(t) {
 function applyMaterial() {
   if (!alive()) return;
   const clear = cfg.tone === 'clear' || ticker.on;   // 播报条模式一律关掉窗口材质：透明时不留色块，深色时保持圆角
-  const noMaterial = clear || ticker.on;     // 播报条自带圆角背景：关掉窗口底层的方形毛玻璃，避免圆角外露出方角
+  // 播报条和圆角窗口：关掉窗口底层的方形毛玻璃（系统材质只能是方的，会在圆角外露出方角）
+  const noMaterial = clear || ticker.on || cfg.round;
   try {
     if (process.platform === 'win32' && win.setBackgroundMaterial) win.setBackgroundMaterial(noMaterial ? 'none' : 'acrylic');
     if (IS_MAC && win.setVibrancy) win.setVibrancy(noMaterial ? null : 'hud');
   } catch {}
-  if (barAlive()) bar.webContents.send('glass', { clear });
+  if (barAlive()) bar.webContents.send('glass', { clear: noMaterial, round: !!cfg.round });
   tickerSend({ type: 'clear', clear: cfg.tickerClear });
 }
 function cycleTone() {
@@ -221,7 +235,7 @@ const INJECT_SRC = fs.readFileSync(path.join(__dirname, 'inject.js'), 'utf8');
 const MARGINS = [[-1, '原版（不调整）'], [32, '宽松'], [16, '标准'], [8, '窄'], [2, '极窄']];
 function inject() {
   if (!alive()) return;
-  page.webContents.executeJavaScript(`window.__wrmZoom = ${cfg.zoom};\n` + INJECT_SRC.replaceAll('__MARGIN__', String(cfg.margin)) + `\nwindow.__wrm && window.__wrm.setUiZoom(${cfg.zoom});`, true).catch(() => {});
+  page.webContents.executeJavaScript(`window.__wrmZoom = ${cfg.zoom}; window.__wrmTopDip = ${pageTop};\n` + INJECT_SRC.replaceAll('__MARGIN__', String(cfg.margin)) + `\nwindow.__wrm && window.__wrm.setUiZoom(${cfg.zoom});`, true).catch(() => {});
 }
 function setMargin(m) { cfg.margin = m; inject(); saveCfg(); refreshTrayMenu(); }
 function pageJS(code) {
@@ -779,6 +793,7 @@ function refreshTrayMenu() {
       label: l, type: 'radio', checked: Math.abs(cfg.fadeLevel - v) < 0.001,
       click: () => { cfg.fadeLevel = v; applyOpacity(); saveCfg(); },
     })) },
+    { label: '圆角窗口', type: 'checkbox', checked: !!cfg.round, click: (i) => setRound(i.checked) },
     { label: '沉浸模式（工具栏自动隐藏）', type: 'checkbox', checked: !cfg.showBar, click: (i) => setImmersive(i.checked) },
     { label: '开机自动启动', type: 'checkbox', checked: login, click: (i) => app.setLoginItemSettings({ openAtLogin: i.checked }) },
     { type: 'separator' },
