@@ -365,6 +365,41 @@ ${CTRL_CSS}
     scroll: (s) => startScroll(s),
     // “切换阅读方式”按钮的位置（网页要求真实点击，由主进程模拟鼠标点击）
     panelOpen: () => maskOpen(),
+    // 播报条：当前页的文字（按行排好，段落之间用全角空格隔开）
+    pageText: () => {
+      const c = document.querySelector('.wr_horizontalReader .wr_canvasContainer canvas');
+      if (!c || !window.__wrmCanvasText) return '';
+      const glyphs = window.__wrmCanvasText(c);
+      if (!glyphs.length) return '';
+      const rows = new Map();
+      for (const [t, x, y] of glyphs) {
+        const ky = Math.round(y / 3) * 3;
+        if (!rows.has(ky)) rows.set(ky, []);
+        rows.get(ky).push([x, t]);
+      }
+      const ys = [...rows.keys()].sort((a, b) => a - b);
+      const lines = ys.map((y) => rows.get(y).sort((a, b) => a[0] - b[0]));
+      const minX = Math.min(...lines.map((l) => l[0][0]));
+      const gaps = ys.slice(1).map((y, i) => y - ys[i]).sort((a, b) => a - b);
+      const lineGap = gaps.length ? gaps[Math.floor(gaps.length / 2)] : 9999;   // 正常行距（中位数）
+      const charW = (() => { const l = lines.find((x) => x.length > 3); return l ? (l[l.length - 1][0] - l[0][0]) / (l.length - 1) : 20; })();
+      let out = '';
+      lines.forEach((l, i) => {
+        const str = l.map((g) => g[1]).join('');
+        const indented = l[0][0] - minX > charW * 1.2;      // 段首缩进 → 新段落
+        const gap = i > 0 && ys[i] - ys[i - 1] > lineGap * 1.3;   // 行距明显变大 → 新段落/标题
+        out += (i > 0 && (indented || gap) ? '　　' : '') + str;
+      });
+      return out.replace(/\s+/g, ' ').trim();
+    },
+    // 当前页还没被记录到时：往后翻一页再翻回来，让网页重画当前页
+    redraw: async () => {
+      if (nextPage() !== 'ok') return false;
+      await new Promise((r) => setTimeout(r, 700));
+      prevPage();
+      await new Promise((r) => setTimeout(r, 700));
+      return true;
+    },
     setUiZoom: (z) => { window.__wrmZoom = z || 1; fitButtons(); },
     toggleRect: () => {
       const b = document.querySelector('.readerControls_item.isHorizontalReader, .readerControls_item.isNormalReader');

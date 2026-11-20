@@ -70,6 +70,7 @@
     <button id="auto"><svg viewBox="0 0 24 24" id="autoIcon"><path d="M7 4l12 8-12 8z"/></svg><span id="autoText"></span></button>
     <button id="autoMore" title="自动翻页设置"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
   </div>
+  <button id="ticker" title="播报条：单行向左滚动，像新闻播报条 (Alt+L)"><svg viewBox="0 0 24 24"><rect x="2" y="8" width="20" height="8" rx="2"/><path d="M6 12h7M16 12h2"/><path d="M19 5l2 -2M19 19l2 2" /></svg></button>
   <button id="tone" title="切换阅读色调 (Ctrl+T)：原色 / 护眼 / 豆沙绿 / 夜间">原色</button>
   <div class="sep o"></div>
   <input id="op" type="range" min="20" max="100" step="5" title="窗口不透明度 (Alt+↑/↓)">
@@ -81,7 +82,7 @@
 </div>
 <script>
   const $ = (id) => document.getElementById(id);
-  ['back', 'home', 'reload', 'fade', 'pin', 'immersive', 'min', 'close', 'zoomIn', 'zoomOut', 'tone'].forEach(id =>
+  ['back', 'home', 'reload', 'fade', 'pin', 'immersive', 'min', 'close', 'zoomIn', 'zoomOut', 'tone', 'ticker'].forEach(id =>
     $(id).addEventListener('click', () => window.api.cmd(id)));
   $('zv').addEventListener('click', () => window.api.cmd('zoomReset'));
   $('auto').addEventListener('click', () => window.api.cmd('auto'));

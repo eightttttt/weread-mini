@@ -1,6 +1,31 @@
 // 书页里的小助手：按住 Alt + 鼠标左键，在窗口任意位置拖动窗口
 // 只向主进程发送“开始/结束拖动”，不向网页暴露任何接口
-const { ipcRenderer } = require('electron');
+const { ipcRenderer, webFrame } = require('electron');
+
+// 在网页脚本运行前，记录它画到画布上的每个字（微信读书正文是一个字一个字画上去的），供“播报条”读取当前页文字。
+// 只做记录，不改变网页的任何显示。
+webFrame.executeJavaScript(`(() => {
+  const P = CanvasRenderingContext2D.prototype;
+  if (P.__wrmHooked) return;
+  P.__wrmHooked = true;
+  const bufs = new WeakMap();
+  const oFill = P.fillText, oClear = P.clearRect;
+  P.clearRect = function (x, y, w, h) {
+    try { const c = this.canvas; if (w >= c.width * 0.9 && h >= c.height * 0.9) bufs.set(c, []); } catch (e) {}
+    return oClear.apply(this, arguments);
+  };
+  P.fillText = function (t, x, y) {
+    try {
+      const c = this.canvas; let b = bufs.get(c);
+      if (!b) { b = []; bufs.set(c, b); }
+      const m = this.getTransform();
+      b.push([String(t), x * m.a + m.e, y * m.d + m.f]);
+      if (b.length > 30000) b.splice(0, 15000);
+    } catch (e) {}
+    return oFill.apply(this, arguments);
+  };
+  window.__wrmCanvasText = (c) => bufs.get(c) || [];
+})();`);
 
 let dragging = false;
 window.addEventListener('pointerdown', (e) => {
