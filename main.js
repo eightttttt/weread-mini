@@ -513,6 +513,7 @@ async function tickerFeed(turn) {
   if (!ticker.on || ticker.busy) return;
   ticker.busy = true;
   try {
+    await pageJS('window.__wrm && window.__wrm.tickerHide(true)');   // 换章后网页可能重建，每次都确认书页是隐形的
     if (turn && ticker.awaiting) turn = false;    // 上次已经翻了页但还没拿到文字：不再重复翻，只等它画完
     let t = await tickerNextText(turn);
     ticker.awaiting = !t && (turn || ticker.awaiting);
@@ -540,6 +541,7 @@ async function enterTicker() {
     ticker.view.setBackgroundColor('#00000000');
     await ticker.view.webContents.loadFile(path.join(__dirname, 'ticker.html'));
   }
+  await pageJS('window.__wrm && window.__wrm.tickerHide(true)');
   win.contentView.addChildView(ticker.view);
   ticker.on = true;
   win.setMinimumSize(160, 24);
@@ -562,6 +564,7 @@ async function exitTicker() {
   const back = Math.max(0, ticker.turns - (at === undefined ? ticker.turns : at));   // 预先翻过去、还没播到的页数
   ticker.on = false;
   applyMaterial();
+  await pageJS('window.__wrm && window.__wrm.tickerHide(false)');
   win.contentView.removeChildView(ticker.view);
   win.setMinimumSize(260, 200);
   const s = ticker.saved, cur = win.getBounds();

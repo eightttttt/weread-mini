@@ -18,6 +18,8 @@
   const isHor = () => !!document.querySelector('.wr_horizontalReader');
 
   // 右侧功能栏改为收纳式：平时隐藏，点右上角“☰”按钮展开
+  // 播报条模式：书页继续在后台排版画字（播报条要读取文字），但完全不显示，避免透明背景下透出原文
+  const TICKER_CSS = `html.wrm-ticker, html.wrm-ticker body { opacity: 0 !important; }`;
   const CTRL_CSS = `
 .readerControls{display:flex!important;flex-direction:column!important;position:fixed!important;left:auto!important;right:6px!important;
   top:auto!important;bottom:calc(var(--wrm-b,26px) + 14px)!important;transform:scale(var(--wrm-s,1))!important;transform-origin:bottom right!important;margin:0!important;
@@ -365,6 +367,7 @@ ${CTRL_CSS}
     scroll: (s) => startScroll(s),
     // “切换阅读方式”按钮的位置（网页要求真实点击，由主进程模拟鼠标点击）
     panelOpen: () => maskOpen(),
+    tickerHide: (on) => { root.classList.toggle('wrm-ticker', !!on); return true; },
     // 播报条：当前页的文字（按行排好，段落之间用全角空格隔开）
     pageText: () => {
       const c = document.querySelector('.wr_horizontalReader .wr_canvasContainer canvas');
@@ -410,6 +413,8 @@ ${CTRL_CSS}
       return { x: r.x + r.width / 2, y: r.y + r.height / 2, to: b.classList.contains('isHorizontalReader') ? 'scroll' : 'page' };
     },
   };
+  const tst = document.createElement('style'); tst.id = '__wrm_ticker_css'; tst.textContent = TICKER_CSS;
+  (document.head || document.documentElement).appendChild(tst);
   css();
   setTimeout(relayout, 300);
   setTimeout(fitControls, 500);
