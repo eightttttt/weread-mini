@@ -80,7 +80,8 @@ function layout() {
   const { width, height } = win.getContentBounds();
   if (ticker.on) {                      // 播报条模式：书页保持原来大小藏在后面（不重新分页），只显示播报条
     bar.setVisible(false);
-    if (ticker.pageBounds) page.setBounds(ticker.pageBounds);
+    // 书页保持原尺寸（不重新分页），但整块移到窗口可见区域左侧之外：照常排版画字，却完全不会露出来
+    if (ticker.pageBounds) { const pb = ticker.pageBounds; page.setBounds({ x: -(pb.width + 100), y: 0, width: pb.width, height: pb.height }); }
     ticker.view.setBounds({ x: 0, y: 0, width, height });
     return;
   }
@@ -160,10 +161,11 @@ function setTone(t) {
 // “透明”色调时关掉材质，让书页背后是清晰的桌面。
 function applyMaterial() {
   if (!alive()) return;
-  const clear = cfg.tone === 'clear' || (ticker.on && cfg.tickerClear);
+  const clear = cfg.tone === 'clear' || ticker.on;   // 播报条模式一律关掉窗口材质：透明时不留色块，深色时保持圆角
+  const noMaterial = clear || ticker.on;     // 播报条自带圆角背景：关掉窗口底层的方形毛玻璃，避免圆角外露出方角
   try {
-    if (process.platform === 'win32' && win.setBackgroundMaterial) win.setBackgroundMaterial(clear ? 'none' : 'acrylic');
-    if (IS_MAC && win.setVibrancy) win.setVibrancy(clear ? null : 'hud');
+    if (process.platform === 'win32' && win.setBackgroundMaterial) win.setBackgroundMaterial(noMaterial ? 'none' : 'acrylic');
+    if (IS_MAC && win.setVibrancy) win.setVibrancy(noMaterial ? null : 'hud');
   } catch {}
   if (barAlive()) bar.webContents.send('glass', { clear });
   tickerSend({ type: 'clear', clear: cfg.tickerClear });

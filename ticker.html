@@ -13,7 +13,7 @@
   body.clear #strip { background: transparent; box-shadow: none; }
   #strip.dragging { cursor: grabbing; }
   /* 文字占满整条播报条 */
-  #clip { position: absolute; top: 0; bottom: 0; right: 0; left: 8px; overflow: hidden; }
+  #clip { position: absolute; top: 0; bottom: 0; right: 0; left: 18px; overflow: hidden; }
   #track { position: absolute; top: 0; bottom: 0; left: 0; display: flex; align-items: center; white-space: nowrap;
     will-change: transform; color: #ececec; font-family: "Microsoft YaHei UI", "PingFang SC", sans-serif; }
   body.clear #track { color: #fff; text-shadow: 0 0 2px #000, 0 0 3px #000, 0 1px 2px rgba(0,0,0,.9); }
@@ -30,9 +30,14 @@
   /* 左侧控制按钮：暂停 / 继续、字号 A− / A+、背景切换、加速 / 减速。平时隐藏，鼠标移到播报条上才出现 */
   #ctl { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); z-index: 5; display: flex; gap: 2px;
     padding: 2px; border-radius: 8px; background: rgba(20,20,22,.55); transition: opacity .15s, background .15s; }
-  /* 平时完全隐藏，鼠标移到播报条上才出现，叠在文字上方 */
-  #ctl { opacity: 0; pointer-events: none; background: rgba(20,20,22,.88); box-shadow: 0 1px 6px rgba(0,0,0,.35); }
-  #strip:hover #ctl { opacity: 1; pointer-events: auto; }
+  /* 左侧功能区：平时只有一个很淡的小标记，鼠标移到这块区域才出现按钮，叠在文字上方 */
+  #ctlzone { position: absolute; left: 0; top: 0; bottom: 0; width: 34px; z-index: 5; }
+  #ctl { opacity: 0; pointer-events: none; background: rgba(20,20,22,.9); box-shadow: 0 1px 6px rgba(0,0,0,.35); }
+  #ctlzone:hover #ctl { opacity: 1; pointer-events: auto; }
+  #hint { position: absolute; left: 7px; top: 50%; transform: translateY(-50%); width: 4px; height: 14px; opacity: .35;
+    background: radial-gradient(circle, #fff 1.2px, transparent 1.6px) 0 0 / 4px 5px repeat-y;
+    filter: drop-shadow(0 0 1px rgba(0,0,0,.9)); transition: opacity .12s; pointer-events: none; }
+  #ctlzone:hover #hint { opacity: 0; }
   #ctl button { width: 24px; height: 22px; border: 0; border-radius: 6px; background: transparent; color: #eee; cursor: pointer;
     display: grid; place-items: center; font: 700 11px "Microsoft YaHei UI", "PingFang SC", sans-serif; padding: 0; }
   #ctl button:hover { background: rgba(255,255,255,.18); }
@@ -48,6 +53,7 @@
 <body>
 <div id="strip">
   <div id="clip"><div id="track"></div><div id="fadeL"></div><div id="fadeR"></div></div>
+  <div id="ctlzone"><div id="hint"></div>
   <div id="ctl">
     <button id="pause" title="暂停 / 继续 (空格)"><svg id="pauseIcon" viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg></button>
     <span class="sep"></span>
@@ -57,7 +63,7 @@
     <span class="sep"></span>
     <button id="splus" class="txt" title="加快（Alt+]，或在播报条上向上滚动滚轮）">快</button>
     <button id="sminus" class="txt" title="减慢（Alt+[，或在播报条上向下滚动滚轮）">慢</button>
-  </div>
+  </div></div>
   <div id="tip"></div>
   <div id="resize" title="拖动调整宽度"></div>
 </div>
@@ -131,12 +137,12 @@
     window.api.ticker(e.ctrlKey || e.metaKey ? 'font' : 'speed', e.deltaY < 0 ? 1 : -1);
   }, { passive: false });
   // 双击退出；右键菜单
-  strip.addEventListener('dblclick', (e) => { if (!e.target.closest('#ctl')) window.api.ticker('exit'); });
+  strip.addEventListener('dblclick', (e) => { if (!e.target.closest('#ctl button')) window.api.ticker('exit'); });
   strip.addEventListener('contextmenu', (e) => { e.preventDefault(); window.api.ticker('menu'); });
   // 按住拖动：移动窗口；按住最右侧细条：调整宽度
   let mode = null;
   strip.addEventListener('pointerdown', (e) => {
-    if (e.button !== 0 || e.target.closest('#ctl')) return;
+    if (e.button !== 0 || e.target.closest('#ctl button')) return;
     strip.setPointerCapture(e.pointerId);
     mode = e.target.id === 'resize' ? 'rsz' : 'drag';
     if (mode === 'drag') strip.classList.add('dragging');

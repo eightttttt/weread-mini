@@ -19,7 +19,8 @@
 
   // 右侧功能栏改为收纳式：平时隐藏，点右上角“☰”按钮展开
   // 播报条模式：书页继续在后台排版画字（播报条要读取文字），但完全不显示，避免透明背景下透出原文
-  const TICKER_CSS = `html.wrm-ticker, html.wrm-ticker body { opacity: 0 !important; }`;
+  // 注意：网页的整页背景色会画在“画布底层”，不受 opacity 影响，所以背景也要一起设成透明，否则会露出一块色块
+  const TICKER_CSS = `html.wrm-ticker, html.wrm-ticker body { opacity: 0 !important; background: transparent !important; background-image: none !important; }`;
   const CTRL_CSS = `
 .readerControls{display:flex!important;flex-direction:column!important;position:fixed!important;left:auto!important;right:6px!important;
   top:auto!important;bottom:calc(var(--wrm-b,26px) + 14px)!important;transform:scale(var(--wrm-s,1))!important;transform-origin:bottom right!important;margin:0!important;
