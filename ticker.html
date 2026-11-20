@@ -21,15 +21,21 @@
   #fadeL { left: 0; background: linear-gradient(90deg, rgba(26,27,30,.95), rgba(26,27,30,0)); border-radius: 8px 0 0 8px; }
   #fadeR { right: 0; background: linear-gradient(270deg, rgba(26,27,30,.95), rgba(26,27,30,0)); border-radius: 0 8px 8px 0; }
   body.clear #fadeL, body.clear #fadeR { display: none; }
-  #tip { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); z-index: 3; padding: 2px 10px; border-radius: 10px;
+  #tip { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); z-index: 3; padding: 2px 10px; border-radius: 10px;
     background: rgba(27,136,238,.92); color: #fff; font: 12px "Microsoft YaHei UI", "PingFang SC", sans-serif; opacity: 0;
     transition: opacity .2s; pointer-events: none; white-space: nowrap; }
   #tip.show { opacity: 1; }
-  #paused { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); z-index: 3; width: 14px; height: 14px; opacity: 0;
-    transition: opacity .15s; pointer-events: none; }
-  #paused::before, #paused::after { content: ''; position: absolute; top: 1px; bottom: 1px; width: 4px; border-radius: 1px; background: #1b88ee; }
-  #paused::before { left: 2px; } #paused::after { right: 2px; }
-  body.hover #paused { opacity: .9; }
+  /* 右侧控制按钮：字号 A− / A+、背景切换、暂停 / 继续。透明背景时平时很淡，鼠标移上去才清晰 */
+  #ctl { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); z-index: 5; display: flex; gap: 2px;
+    padding: 2px; border-radius: 8px; background: rgba(20,20,22,.55); transition: opacity .15s, background .15s; }
+  body.clear #ctl { opacity: .3; background: rgba(20,20,22,.35); }
+  #ctl:hover, body.clear #ctl:hover { opacity: 1; background: rgba(20,20,22,.85); }
+  #ctl button { width: 24px; height: 22px; border: 0; border-radius: 6px; background: transparent; color: #eee; cursor: pointer;
+    display: grid; place-items: center; font: 700 11px "Microsoft YaHei UI", "PingFang SC", sans-serif; padding: 0; }
+  #ctl button:hover { background: rgba(255,255,255,.18); }
+  #ctl button.big { font-size: 14px; }
+  #ctl svg { width: 13px; height: 13px; fill: currentColor; }
+  #ctl #pause.paused { background: #1b88ee; }
   /* 最右侧细条：拖动调整播报条宽度 */
   #resize { position: absolute; right: 0; top: 0; bottom: 0; width: 8px; cursor: ew-resize; z-index: 4; }
 </style>
@@ -38,7 +44,12 @@
 <div id="strip">
   <div id="track"></div>
   <div id="fadeL"></div><div id="fadeR"></div>
-  <div id="paused"></div>
+  <div id="ctl">
+    <button id="fminus" title="字号缩小 (Ctrl -)">A−</button>
+    <button id="fplus" class="big" title="字号放大 (Ctrl +)">A+</button>
+    <button id="bg" title="背景：透明 / 深色"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18V3z"/><path d="M12 3a9 9 0 0 1 0 18" fill="none" stroke="currentColor" stroke-width="2"/></svg></button>
+    <button id="pause" title="暂停 / 继续 (空格)"><svg id="pauseIcon" viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg></button>
+  </div>
   <div id="tip"></div>
   <div id="resize" title="拖动调整宽度"></div>
 </div>
@@ -47,13 +58,10 @@
   const strip = $('strip'), track = $('track');
   let speed = 60;          // 像素/秒
   let x = 0;               // 文字条当前位移
-  let hovering = false, last = performance.now(), asked = false, segSeq = 0;
+  let paused = false, last = performance.now(), asked = false;
 
-  function fit() {         // 字号随播报条高度变化
-    const h = strip.clientHeight;
-    track.style.fontSize = Math.max(12, Math.min(40, Math.round(h * 0.48))) + 'px';
-  }
-  window.addEventListener('resize', fit); fit();
+  function setFont(px) { track.style.fontSize = px + 'px'; }
+  setFont(18);
 
   function addSeg(text, id) {
     const sp = document.createElement('span');
@@ -65,7 +73,7 @@
 
   function frame(now) {
     const dt = Math.min(0.1, (now - last) / 1000); last = now;
-    if (!hovering && track.firstChild) x -= speed * dt;
+    if (!paused && track.firstChild) x -= speed * dt;
     // 移出左边的段落删掉，并告诉主程序“读到了哪一页”
     let first = track.firstElementChild;
     while (first && x + first.offsetWidth < 0 && track.children.length > 1) {
@@ -91,20 +99,34 @@
     else if (m.type === 'tip') tip(m.text);
     else if (m.type === 'clear') document.body.classList.toggle('clear', !!m.clear);
     else if (m.type === 'retry') asked = false;
+    else if (m.type === 'font') { setFont(m.size); if (m.show) tip(`字号 ${m.size}`); }
   });
 
-  // 鼠标悬停暂停
-  strip.addEventListener('mouseenter', () => { hovering = true; document.body.classList.add('hover'); });
-  strip.addEventListener('mouseleave', () => { hovering = false; document.body.classList.remove('hover'); });
-  // 滚轮调速度
-  strip.addEventListener('wheel', (e) => { e.preventDefault(); window.api.ticker('speed', e.deltaY < 0 ? 1 : -1); }, { passive: false });
+  // 暂停 / 继续（按钮或空格）
+  const PAUSE = '<rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/>', PLAY = '<path d="M7 4l13 8-13 8z"/>';
+  function setPaused(v) {
+    paused = v;
+    $('pause').classList.toggle('paused', v);
+    $('pauseIcon').innerHTML = v ? PLAY : PAUSE;
+    $('pause').title = v ? '继续 (空格)' : '暂停 (空格)';
+    tip(v ? '已暂停' : '继续播放');
+  }
+  $('pause').addEventListener('click', () => setPaused(!paused));
+  $('fminus').addEventListener('click', () => window.api.ticker('font', -1));
+  $('fplus').addEventListener('click', () => window.api.ticker('font', 1));
+  $('bg').addEventListener('click', () => window.api.ticker('bg'));
+  // 滚轮调速度；Ctrl + 滚轮调字号
+  strip.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    window.api.ticker(e.ctrlKey || e.metaKey ? 'font' : 'speed', e.deltaY < 0 ? 1 : -1);
+  }, { passive: false });
   // 双击退出；右键菜单
-  strip.addEventListener('dblclick', () => window.api.ticker('exit'));
+  strip.addEventListener('dblclick', (e) => { if (!e.target.closest('#ctl')) window.api.ticker('exit'); });
   strip.addEventListener('contextmenu', (e) => { e.preventDefault(); window.api.ticker('menu'); });
   // 按住拖动：移动窗口；按住最右侧细条：调整宽度
   let mode = null;
   strip.addEventListener('pointerdown', (e) => {
-    if (e.button !== 0) return;
+    if (e.button !== 0 || e.target.closest('#ctl')) return;
     strip.setPointerCapture(e.pointerId);
     mode = e.target.id === 'resize' ? 'rsz' : 'drag';
     if (mode === 'drag') strip.classList.add('dragging');
@@ -114,7 +136,13 @@
   const end = () => { if (!mode) return; window.api.ticker(mode, 'end'); mode = null; strip.classList.remove('dragging'); };
   strip.addEventListener('pointerup', end);
   strip.addEventListener('lostpointercapture', end);
-  window.addEventListener('keydown', (e) => { if (e.key === 'Escape') window.api.ticker('exit'); });
+  window.addEventListener('keydown', (e) => {
+    const c = e.ctrlKey || e.metaKey;
+    if (e.key === 'Escape') window.api.ticker('exit');
+    else if (e.key === ' ') { e.preventDefault(); setPaused(!paused); }
+    else if (c && (e.key === '=' || e.key === '+')) { e.preventDefault(); window.api.ticker('font', 1); }
+    else if (c && e.key === '-') { e.preventDefault(); window.api.ticker('font', -1); }
+  });
 </script>
 </body>
 </html>

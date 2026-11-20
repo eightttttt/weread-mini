@@ -38,7 +38,7 @@ if (!app.requestSingleInstanceLock()) { app.quit(); process.exit(0); }
 // ---------- 设置持久化 ----------
 const cfgFile = () => path.join(app.getPath('userData'), 'settings.json');
 const defaults = {
-  bounds: null, opacity: 1, onTop: true, fade: false, fadeLevel: 0, autoInterval: 30, autoSpeed: 40, margin: 16, tickerSpeed: 60, tickerH: 40,
+  bounds: null, opacity: 1, onTop: true, fade: false, fadeLevel: 0, autoInterval: 30, autoSpeed: 40, margin: 16, tickerSpeed: 60, tickerH: 40, tickerFont: 18, tickerClear: true,
   lastUrl: HOME, showBar: true, zoom: 1, tone: 'none',
 };
 let cfg = { ...defaults };
@@ -160,13 +160,13 @@ function setTone(t) {
 // “透明”色调时关掉材质，让书页背后是清晰的桌面。
 function applyMaterial() {
   if (!alive()) return;
-  const clear = cfg.tone === 'clear';
+  const clear = cfg.tone === 'clear' || (ticker.on && cfg.tickerClear);
   try {
     if (process.platform === 'win32' && win.setBackgroundMaterial) win.setBackgroundMaterial(clear ? 'none' : 'acrylic');
     if (IS_MAC && win.setVibrancy) win.setVibrancy(clear ? null : 'hud');
   } catch {}
   if (barAlive()) bar.webContents.send('glass', { clear });
-  tickerSend({ type: 'clear', clear });
+  tickerSend({ type: 'clear', clear: cfg.tickerClear });
 }
 function cycleTone() {
   setTone(TONE_ORDER[(TONE_ORDER.indexOf(cfg.tone) + 1) % TONE_ORDER.length]);
@@ -488,6 +488,8 @@ ipcMain.on('drag', (_e, t) => {
 // 原理：网页把正文一个字一个字画到画布上，page-preload.js 记录下这些字，inject.js 按行拼成当前页的文字；
 // 播报条快滚完时在后台自动翻到下一页，把新一页的文字接到后面。书页保持原大小藏在播报条后面，不会重新分页。
 const TICKER_SPEEDS = [20, 30, 40, 50, 60, 80, 100, 120, 150, 200];   // 像素/秒
+const TICKER_FONTS = [12, 14, 16, 18, 20, 22, 24, 28, 32, 36, 40];      // 播报条字号（像素）
+const tickerHeight = () => Math.round(cfg.tickerFont * 2 + 8);           // 条的高度随字号变化
 const ticker = { on: false, view: null, saved: null, pageBounds: null, sent: 0, reading: 0, busy: false, lastText: '',
   turns: 0, turnAt: {}, awaiting: false };   // turns：播报条实际翻过的页数；turnAt：每段文字对应翻到第几次
 function tickerSend(m) { if (ticker.view && !ticker.view.webContents.isDestroyed()) ticker.view.webContents.send('ticker', m); }
@@ -541,14 +543,16 @@ async function enterTicker() {
   win.contentView.addChildView(ticker.view);
   ticker.on = true;
   win.setMinimumSize(160, 24);
-  const h = cfg.tickerH || 40;
+  const h = tickerHeight();
   const b = ticker.saved;
   win.setBounds({ x: b.x, y: b.y + b.height - h, width: b.width, height: h });   // 贴着原窗口底部收成一条
   layout();
   tickerSend({ type: 'reset' });
   tickerSend({ type: 'speed', speed: cfg.tickerSpeed });
-  tickerSend({ type: 'clear', clear: cfg.tone === 'clear' });
-  tickerSend({ type: 'tip', text: '双击或 Esc 退出 · 滚轮调速度 · 悬停暂停' });
+  tickerSend({ type: 'font', size: cfg.tickerFont });
+  tickerSend({ type: 'clear', clear: cfg.tickerClear });
+  applyMaterial();
+  tickerSend({ type: 'tip', text: '双击或 Esc 退出 · 滚轮调速度 · Ctrl+滚轮调字号' });
   refreshTrayMenu(); sendState();
   tickerFeed(false);
 }
@@ -556,8 +560,8 @@ async function exitTicker() {
   if (!ticker.on || !alive()) return;
   const at = ticker.turnAt[ticker.reading];
   const back = Math.max(0, ticker.turns - (at === undefined ? ticker.turns : at));   // 预先翻过去、还没播到的页数
-  cfg.tickerH = win.getBounds().height;
   ticker.on = false;
+  applyMaterial();
   win.contentView.removeChildView(ticker.view);
   win.setMinimumSize(260, 200);
   const s = ticker.saved, cur = win.getBounds();
@@ -573,6 +577,26 @@ function tickerSpeed(dir, show = true) {
   tickerSend({ type: 'speed', speed: cfg.tickerSpeed, show });
   refreshTrayMenu();
 }
+function tickerFont(dir) {
+  const i = TICKER_FONTS.indexOf(cfg.tickerFont);
+  const j = Math.max(0, Math.min(TICKER_FONTS.length - 1, (i < 0 ? 3 : i) + dir));
+  setTickerFont(TICKER_FONTS[j]);
+}
+function setTickerFont(px) {
+  cfg.tickerFont = px; saveCfg();
+  tickerSend({ type: 'font', size: px, show: true });
+  if (ticker.on && alive()) {                     // 高度跟着字号变，底边位置不动
+    const b = win.getBounds(), h = tickerHeight();
+    win.setBounds({ x: b.x, y: b.y + b.height - h, width: b.width, height: h });
+    layout();
+  }
+  refreshTrayMenu();
+}
+function setTickerClear(v) {
+  cfg.tickerClear = v; saveCfg();
+  tickerSend({ type: 'clear', clear: v });
+  applyMaterial(); refreshTrayMenu();
+}
 function tickerMenu() {
   return [
     { label: ticker.on ? '退出播报条' : '开启播报条（单行滚动）', accelerator: 'Alt+L', click: () => { showWin(); toggleTicker(); } },
@@ -580,6 +604,10 @@ function tickerMenu() {
       label: `${v} 像素/秒${v === 60 ? '（默认）' : ''}`, type: 'radio', checked: cfg.tickerSpeed === v,
       click: () => { cfg.tickerSpeed = v; saveCfg(); tickerSend({ type: 'speed', speed: v, show: true }); refreshTrayMenu(); },
     })) },
+    { label: `字号（${cfg.tickerFont}）`, submenu: TICKER_FONTS.map((v) => ({
+      label: `${v}${v === 18 ? '（默认）' : ''}`, type: 'radio', checked: cfg.tickerFont === v, click: () => setTickerFont(v),
+    })) },
+    { label: '背景透明', type: 'checkbox', checked: cfg.tickerClear, click: (i) => setTickerClear(i.checked) },
   ];
 }
 ipcMain.on('ticker', (_e, type, val) => {
@@ -587,6 +615,8 @@ ipcMain.on('ticker', (_e, type, val) => {
   if (type === 'more') tickerFeed(true);
   else if (type === 'passed') ticker.reading = Math.max(ticker.reading, val || ticker.reading);
   else if (type === 'speed') tickerSpeed(val);
+  else if (type === 'font') tickerFont(val);
+  else if (type === 'bg') setTickerClear(!cfg.tickerClear);
   else if (type === 'exit') exitTicker();
   else if (type === 'menu') Menu.buildFromTemplate([...tickerMenu(), { type: 'separator' }, { label: '隐藏到托盘', click: hideToTray }]).popup({ window: win });
   else if (type === 'drag') ipcMain.emit('drag', _e, val);
