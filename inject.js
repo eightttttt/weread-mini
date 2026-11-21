@@ -512,6 +512,8 @@ ${CTRL_CSS}
   // 微信读书网页宽度 ≤720px 时会隐藏标志和头像菜单，只剩搜索框；标志能点回首页，头像菜单能退出登录等，这里把它们留住。
   // 极窄时（≤300px）标志只显示图标部分，把空间留给搜索框。
   const NAV_CSS = `
+    /* 书架顶部的“书架标题 / 会员卡剩余 / 下载微信读书 App 管理书架”卡片：用户觉得占位置，隐藏 */
+    .shelf_header { display: none !important; }
     @media (max-width: 720px) {
       .navBar_inner { padding: 0 16px !important; gap: 10px; }
       .navBar_logo { display: block !important; flex: 0 0 auto; margin-right: 0 !important; }
