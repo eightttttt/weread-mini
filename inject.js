@@ -535,6 +535,8 @@ ${CTRL_CSS}
   // 自己画一条悬浮在内容上方、不占位置的细滚动条，可以拖动。页面里的弹窗、目录等内部滚动区域同样适用。
   const SB_CSS = `
     html, html * { scrollbar-width: none !important; }
+    /* 首页等页面用 OverlayScrollbars 组件画的滚动条（不是浏览器原生的，且设成永不隐藏），一并隐藏，改用下面的悬浮细条 */
+    .os-scrollbar { display: none !important; }
     #__wrm_sb { position: fixed; z-index: 2147483646; width: 6px; border-radius: 3px; right: 2px; top: 0; height: 0;
       background: rgba(128,128,128,.5); opacity: 0; transition: opacity .25s, width .12s, background-color .12s;
       pointer-events: none; }
