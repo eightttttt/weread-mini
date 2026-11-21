@@ -209,7 +209,7 @@ ${CTRL_CSS}
   window.addEventListener('click', (e) => {
     if (compat || !isHor() || e.button !== 0 || e.altKey || e.ctrlKey || e.shiftKey) return;
     if (Math.abs(e.clientX - downX) > 5 || Math.abs(e.clientY - downY) > 5 || Date.now() - downT > 600) return;
-    if (e.target.closest('#__wrm_tg, #__wrm_shelf, button, a, input, textarea, [role=button], .readerControls, [class*=panel], [class*=dialog], [class*=popup], [class*=toolbar], [class*=Toolbar], [class*=menu]')) return;
+    if (e.target.closest('#__wrm_tg, #__wrm_shelf, #__wrm_sb, button, a, input, textarea, [role=button], .readerControls, [class*=panel], [class*=dialog], [class*=popup], [class*=toolbar], [class*=Toolbar], [class*=menu]')) return;
     const sel = window.getSelection && window.getSelection();
     if (sel && !sel.isCollapsed) return;
     // 点在遮罩上（关闭弹窗）或弹窗开着时不翻页
@@ -530,27 +530,85 @@ ${CTRL_CSS}
   const navst = document.createElement('style'); navst.id = '__wrm_nav_css'; navst.textContent = NAV_CSS;
   (document.head || document.documentElement).appendChild(navst);
 
-  // ---------- 滚动条：平时隐藏，滚动时或鼠标移到窗口右边缘时才出现 ----------
+  // ---------- 滚动条：悬浮细滚动条，平时隐藏，滚动时或鼠标移到滚动区右边缘时才出现 ----------
+  // 浏览器自带滚动条即使透明也会在右侧占一条位置（底色不同，页面左右不对称），所以全部关掉，
+  // 自己画一条悬浮在内容上方、不占位置的细滚动条，可以拖动。页面里的弹窗、目录等内部滚动区域同样适用。
   const SB_CSS = `
-    html, html * { scrollbar-width: thin !important; scrollbar-color: transparent transparent !important; }
-    html.wrm-sb, html.wrm-sb * { scrollbar-color: rgba(128,128,128,.55) transparent !important; }`;
+    html, html * { scrollbar-width: none !important; }
+    #__wrm_sb { position: fixed; z-index: 2147483646; width: 6px; border-radius: 3px; right: 2px; top: 0; height: 0;
+      background: rgba(128,128,128,.5); opacity: 0; transition: opacity .25s, width .12s, background-color .12s;
+      pointer-events: none; }
+    #__wrm_sb.on { opacity: 1; pointer-events: auto; }
+    #__wrm_sb:hover, #__wrm_sb.drag { width: 8px; background: rgba(110,110,110,.7); }`;
   const sbst = document.createElement('style'); sbst.id = '__wrm_sb_css'; sbst.textContent = SB_CSS;
   (document.head || document.documentElement).appendChild(sbst);
-  let sbHideT = null, sbEdge = false;
-  function showSb(ms) {
-    root.classList.add('wrm-sb');
-    clearTimeout(sbHideT);
-    if (ms) sbHideT = setTimeout(() => { if (!sbEdge) root.classList.remove('wrm-sb'); }, ms);
+  const sbEl = document.createElement('div'); sbEl.id = '__wrm_sb';
+  const addSb = () => { if (document.body && !document.getElementById('__wrm_sb')) document.body.appendChild(sbEl); };
+  addSb(); setInterval(addSb, 1000);
+  let sbTarget = null, sbHideT = null, sbHover = false, sbDrag = null;
+  const docScroller = () => document.scrollingElement || document.documentElement;
+  const canScroll = (el) => el && el.scrollHeight > el.clientHeight + 2;
+  function scrollerOf(el) {                       // 鼠标所在位置的可滚动区域（找不到就用整页）
+    for (let e = el; e && e !== document.body && e !== document.documentElement; e = e.parentElement) {
+      if (e.id === '__wrm_sb') return sbTarget;
+      const oy = getComputedStyle(e).overflowY;
+      if ((oy === 'auto' || oy === 'scroll' || oy === 'overlay') && canScroll(e)) return e;
+    }
+    return docScroller();
   }
-  window.addEventListener('scroll', () => showSb(900), { capture: true, passive: true });
-  window.addEventListener('wheel', () => showSb(900), { capture: true, passive: true });
+  function scrollerRect(el) {
+    if (el === docScroller()) return { top: 0, right: innerWidth, height: innerHeight };
+    const r = el.getBoundingClientRect(); return { top: r.top, right: r.right, height: r.height };
+  }
+  function placeSb() {
+    const el = sbTarget;
+    if (!el || !el.isConnected || !canScroll(el)) { sbEl.classList.remove('on'); return false; }
+    const r = scrollerRect(el), view = el.clientHeight, total = el.scrollHeight;
+    const h = Math.max(28, r.height * view / total);
+    const y = r.top + (r.height - h) * (el.scrollTop / Math.max(1, total - view));
+    sbEl.style.height = h + 'px'; sbEl.style.top = y + 'px'; sbEl.style.left = (r.right - 10) + 'px';
+    return true;
+  }
+  function showSb(el, ms) {
+    if (el) sbTarget = el;
+    if (!placeSb()) return;
+    sbEl.classList.add('on');
+    clearTimeout(sbHideT);
+    if (ms) sbHideT = setTimeout(() => { if (!sbHover && !sbDrag) sbEl.classList.remove('on'); }, ms);
+  }
+  window.addEventListener('scroll', (e) => {
+    const t = e.target === document || e.target === window ? docScroller() : e.target;
+    if (sbDrag && sbDrag.el !== t) return;
+    showSb(t, 900);
+  }, { capture: true, passive: true });
   window.addEventListener('mousemove', (e) => {
-    const near = e.clientX >= innerWidth - 16;                  // 鼠标在右边缘滚动条区域
-    if (near === sbEdge) return;
-    sbEdge = near;
-    if (near) showSb(0); else showSb(600);
+    if (sbDrag) return;
+    const el = scrollerOf(e.target);
+    const r = canScroll(el) ? scrollerRect(el) : null;
+    const near = !!r && e.clientX >= r.right - 16 && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.top + r.height;
+    if (near) { sbHover = true; showSb(el, 0); }
+    else if (sbHover) { sbHover = false; showSb(null, 600); }
   }, { passive: true });
-  document.addEventListener('mouseleave', () => { sbEdge = false; showSb(300); });
+  document.addEventListener('mouseleave', () => { sbHover = false; if (!sbDrag) showSb(null, 300); });
+  // 拖动滚动条
+  sbEl.addEventListener('pointerdown', (e) => {
+    if (!sbTarget) return;
+    e.preventDefault(); e.stopPropagation();
+    sbEl.setPointerCapture(e.pointerId);
+    sbDrag = { el: sbTarget, y: e.clientY, top: sbTarget.scrollTop };
+    sbEl.classList.add('drag');
+  });
+  sbEl.addEventListener('pointermove', (e) => {
+    if (!sbDrag) return;
+    const el = sbDrag.el, r = scrollerRect(el), h = sbEl.offsetHeight;
+    const ratio = (el.scrollHeight - el.clientHeight) / Math.max(1, r.height - h);
+    el.scrollTop = sbDrag.top + (e.clientY - sbDrag.y) * ratio;
+    placeSb();
+  });
+  const endDrag = () => { if (!sbDrag) return; sbDrag = null; sbEl.classList.remove('drag'); showSb(null, sbHover ? 0 : 600); };
+  sbEl.addEventListener('pointerup', endDrag);
+  sbEl.addEventListener('pointercancel', endDrag);
+  window.addEventListener('resize', () => { if (sbEl.classList.contains('on')) placeSb(); });
 
   const tst = document.createElement('style'); tst.id = '__wrm_ticker_css'; tst.textContent = TICKER_CSS;
   (document.head || document.documentElement).appendChild(tst);
