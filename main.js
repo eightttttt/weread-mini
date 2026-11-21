@@ -327,6 +327,18 @@ function autoAdjust(dir) {          // 调快/调慢（按当前阅读方式）
   }
   saveCfg(); sendAuto(); refreshTrayMenu();
 }
+// 网页改版自动降级：inject.js 检测到微信读书网页结构变了会退回原版排版，这里负责提示（每次启动只提示一次）
+let compatMode = false, compatNotified = false;
+function setCompat(on) {
+  if (on === compatMode) return;
+  compatMode = on;
+  refreshTrayMenu();
+  if (on && !compatNotified) {
+    compatNotified = true;
+    flashBar({ text: '网页有变化，已换回原版排版', ms: 6000 });
+    checkUpdate(false);                                  // 顺便看看有没有修好的新版本
+  }
+}
 function flashBar(msg) {
   if (bar && !bar.webContents.isDestroyed()) bar.webContents.send('flash', msg);
   const ms = (typeof msg === 'object' && msg.ms) || 1500;
@@ -469,8 +481,10 @@ function createWindow() {
   let lastProg = null;
   setInterval(async () => {
     if (!alive() || !barAlive()) return;
-    const t = isReader() ? (await pageJS('window.__wrm && window.__wrm.progress ? window.__wrm.progress() : ""')) || '' : '';
+    const r = isReader() ? (await pageJS('window.__wrm && window.__wrm.progress ? [window.__wrm.progress(), !!(window.__wrm.compat && window.__wrm.compat())] : ["", false]')) || ['', false] : ['', false];
+    const t = r[0] || '';
     if (t !== lastProg) { lastProg = t; bar.webContents.send('prog', t); }
+    setCompat(!!r[1]);
   }, 400);
   wc.on('zoom-changed', (_e, dir) => zoomStep(dir === 'in' ? 1 : -1));   // Ctrl + 滚轮
   wc.on('context-menu', pageContextMenu);
@@ -891,6 +905,7 @@ function refreshTrayMenu() {
   const login = app.getLoginItemSettings().openAtLogin;
   tray.setContextMenu(Menu.buildFromTemplate([
     ...(update ? [{ label: `⬆ 有新版本 v${update.version}（点击下载）`, click: () => shell.openExternal(update.url) }, { type: 'separator' }] : []),
+    ...(compatMode ? [{ label: '兼容模式：微信读书网页有变化，暂用原版排版', enabled: false }, { label: '检查有没有修复的新版本', click: () => checkUpdate(true) }, { type: 'separator' }] : []),
     { label: `显示 / 隐藏　${ALT}Q`, click: toggleShow },
     { type: 'separator' },
     { label: `字体大小（${Math.round(cfg.zoom * 100)}%）`, submenu: zoomMenu() },

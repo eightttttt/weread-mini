@@ -5,6 +5,8 @@
   if (window.__wrm) { window.__wrm.setMargin(M0); return; }
 
   let M = M0;          // 目标左右边距（像素）
+  let wantM = M0;      // 用户设置的边距（兼容模式下暂时不用）
+  let compat = false;  // 兼容模式：微信读书网页结构变了，暂时退回原版排版，不做任何改动
   let pad = 70;        // 微信读书翻页模式内置的左右留白，会自动校准
   let tries = 0;
   let pt = 84, pb = 70;  // 翻页模式正文上下内置留白（顶部书名/章节名行、底部翻页按钮），会自动读取
@@ -205,7 +207,7 @@ ${CTRL_CSS}
   let downX = 0, downY = 0, downT = 0;
   window.addEventListener('pointerdown', (e) => { downX = e.clientX; downY = e.clientY; downT = Date.now(); }, true);
   window.addEventListener('click', (e) => {
-    if (!isHor() || e.button !== 0 || e.altKey || e.ctrlKey || e.shiftKey) return;
+    if (compat || !isHor() || e.button !== 0 || e.altKey || e.ctrlKey || e.shiftKey) return;
     if (Math.abs(e.clientX - downX) > 5 || Math.abs(e.clientY - downY) > 5 || Date.now() - downT > 600) return;
     if (e.target.closest('#__wrm_tg, #__wrm_shelf, button, a, input, textarea, [role=button], .readerControls, [class*=panel], [class*=dialog], [class*=popup], [class*=toolbar], [class*=Toolbar], [class*=menu]')) return;
     const sel = window.getSelection && window.getSelection();
@@ -413,8 +415,45 @@ ${CTRL_CSS}
     if (!readingSession) { readingSession = true; restorePos(k); }   // 从书架进入或刚打开：恢复位置；书内换章：从头计数
   }, 300);
 
+  // ---------- 网页改版自动降级 ----------
+  // 小窗的排版依赖微信读书网页的结构。进入阅读页后如果持续 12 秒找不到正文的关键元素，
+  // 或者正文被我们的排版挪出了窗口，就认为网页改版了：退回原版排版、停用点击翻页，至少保证能正常阅读。
+  // 回到书架会重新检查（网页恢复正常或换了一本书时自动恢复小窗排版）。
+  function layoutHealthy() {
+    if (document.querySelector('.readerContent')) return true;                  // 上下滚动模式
+    const hor = document.querySelector('.wr_horizontalReader');
+    if (!hor) return false;
+    const need = ['.readerChapterContent', '.renderTargetContainer', '.wr_canvasContainer canvas', '.preRenderContent'];
+    if (!need.every((q) => hor.querySelector(q))) return false;
+    if (M < 0) return true;
+    const r = hor.querySelector('.wr_canvasContainer canvas').getBoundingClientRect();
+    if (r.width < 50 || r.height < 50) return null;                               // 正在重新排版，不算
+    return r.right > 20 && r.left < innerWidth - 20 && r.bottom > 20 && r.top < innerHeight - 20;
+  }
+  let badSince = 0;
+  function enterCompat() {
+    compat = true; badSince = 0;
+    M = -1; css(); relayout();
+    root.classList.remove('wrm-open');
+    console.warn('[wrm] 微信读书网页结构有变化，已切换为原版排版');
+  }
+  setInterval(() => {
+    if (!inReaderPath()) {                                                         // 离开阅读页：下次进书重新检查
+      badSince = 0;
+      if (compat) { compat = false; M = wantM; css(); }
+      return;
+    }
+    if (compat || restoring || document.readyState !== 'complete') return;
+    const ok = layoutHealthy();
+    if (ok === null) return;
+    if (ok) { badSince = 0; return; }
+    if (!badSince) { badSince = Date.now(); return; }
+    if (Date.now() - badSince > 12000) enterCompat();
+  }, 1000);
+
   window.__wrm = {
-    setMargin(m) { M = m; css(); relayout(); },
+    setMargin(m) { wantM = m; if (compat) return; M = m; css(); relayout(); },
+    compat: () => compat,
     setTop(px) { window.__wrmTopDip = px; if (px === topDip) return; topDip = px; css(); relayout(); },
     mode: () => (isHor() ? 'page' : 'scroll'),
     next: () => nextPage(),
