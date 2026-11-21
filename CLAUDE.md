@@ -7,7 +7,7 @@
 - 用户：Zhang Bin（GitHub：eightttttt）。**始终用中文回复。**
 - 用户在 Windows 上用打包好的 exe，不跑源码。每次改动的交付方式：
   1. 改代码 → `package.json` 版本号 +0.01（如 2.18.0 → 2.19.0）
-  2. `npm run pack:win` → `dist/WeReadMini-win32-x64/`
+  2. `npm run pack:win` → `dist/WeReadMini-win32-x64/`（打包后自动跑 `scripts/check-pack.js`，检查 asar 里关键文件齐全；新增必需文件时要加进它的 `REQUIRED`）
   3. 更新包里的 `使用说明.txt`：改标题版本号，在最前面加一段“vX.XX 更新/修复：”说明（只存在于 dist 包里，不在仓库）
   4. 把 `WeReadMini-win32-x64` 复制成文件夹 `微信读书小窗`，打成 `微信读书小窗_vX.XX.zip`。**复制前先 `rm -rf dist/微信读书小窗`**：残留的旧文件夹会让 `cp -r` 把程序复制进它里面，压缩包里变成两份程序、体积翻倍（v2.26 第一次打包出过这个问题）。正常大小约 150 MB。
   5. git 提交并推送到 `origin main`（提交信息写清版本和改动）
@@ -49,6 +49,8 @@ Electron 45，一个 `BaseWindow`（无边框、`transparent: true`、背景 `#0
 
 ## 踩过的坑（别再踩）
 
+0. **v2.27 工具栏消失**：核对安装包时在项目根目录 `asar extract-file ... bar.html` 后 `rm -f bar.html`，把源文件删了并被 `git add -A` 提交。解压/临时文件一律放 `/tmp`，不要在项目目录里删同名文件；提交前看一眼 `git status` 有没有意外的删除。
+
 1. **划线对不上行（v2.15 + v2.16 两个原因）**
    - 微信读书只在启动时读一次 `devicePixelRatio`。缩放（A+/A−，本质是 zoomFactor）或换不同缩放比例的显示器后，绘制和命中错位 → `inject.js` 有 DPR 监视器，稳定 0.9s 后 `rememberNow()` + `location.reload()`，再由位置恢复回到原页；page 的 webPreferences 里带 `zoomFactor: cfg.zoom`，启动即正确比例。
    - 我们用负 margin 把 `.readerChapterContent` 上移/加宽，而 `offsetTop/offsetLeft` 是相对它算的，不含这段位移 → 选中鼠标上方 ~72px 的文字。修法：`page-preload.js` 在主世界改写 `HTMLElement.prototype.offsetTop/offsetLeft`，仅对 `.renderTargetContainer` 返回 `getBoundingClientRect() + scroll`。**以后再改排版 CSS，必须保证这个映射仍然成立。**
@@ -83,4 +85,4 @@ npm run pack:win   # electron-packager，asar，输出 dist/WeReadMini-win32-x64
 
 ## 版本历史（摘要）
 
-v1.x 基础小窗、置顶、托盘、隐身、自动翻页、窄边距、点击翻页、收纳菜单 → v2.1 按 1.9 重做字号/按钮缩放 → v2.3 首次上传 GitHub → v2.4 修自动乱翻页、毛玻璃工具栏、透明背景 → v2.5 书架/☰ 移到下方两角 → v2.6–2.11 播报条及其修复 → v2.12 工具栏优先级收起 → v2.13–2.14 进度显示移到工具栏 → v2.15–2.16 修划线错位 → v2.17 书名+页数玻璃块 → v2.18 圆角窗口 → v2.19 请作者喝瓶水（打赏弹窗）→ v2.20 打赏弹窗改深色毛玻璃 + 收款码 → v2.21 播报条隐身/隐藏时自动暂停 → v2.22 打赏文案 → v2.23 工具栏水滴打赏按钮 → v2.24 水滴蓝色、优先级 60、⋯ 菜单置顶 → v2.25 水滴改灰色、移到 ⋯ 左边 → v2.26 水滴最先收起（优先级 5）→ v2.27 ⋯ 菜单里打赏移到最底部、去掉表情。详见 `git log`。
+v1.x 基础小窗、置顶、托盘、隐身、自动翻页、窄边距、点击翻页、收纳菜单 → v2.1 按 1.9 重做字号/按钮缩放 → v2.3 首次上传 GitHub → v2.4 修自动乱翻页、毛玻璃工具栏、透明背景 → v2.5 书架/☰ 移到下方两角 → v2.6–2.11 播报条及其修复 → v2.12 工具栏优先级收起 → v2.13–2.14 进度显示移到工具栏 → v2.15–2.16 修划线错位 → v2.17 书名+页数玻璃块 → v2.18 圆角窗口 → v2.19 请作者喝瓶水（打赏弹窗）→ v2.20 打赏弹窗改深色毛玻璃 + 收款码 → v2.21 播报条隐身/隐藏时自动暂停 → v2.22 打赏文案 → v2.23 工具栏水滴打赏按钮 → v2.24 水滴蓝色、优先级 60、⋯ 菜单置顶 → v2.25 水滴改灰色、移到 ⋯ 左边 → v2.26 水滴最先收起（优先级 5）→ v2.27 ⋯ 菜单里打赏移到最底部、去掉表情（此版漏了 bar.html，工具栏消失）→ v2.28 恢复 bar.html + 打包后自动检查文件。详见 `git log`。
