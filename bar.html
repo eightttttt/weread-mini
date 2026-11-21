@@ -91,12 +91,13 @@
   <button id="pin" title="窗口置顶"><svg viewBox="0 0 24 24"><path d="M12 17v5"/><path d="M9 3h6l-1 6 3 3v2H7v-2l3-3z"/></svg></button>
   <button id="immersive" title="沉浸模式 (Ctrl+H)：工具栏自动隐藏，鼠标移到窗口顶部即出现"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
   <button id="more" title="更多功能（窗口太窄时收起的按钮在这里）">⋯</button>
+  <button id="donate" title="请作者喝瓶水"><svg viewBox="0 0 24 24"><path d="M12 3.5C12 3.5 6 10.1 6 14a6 6 0 0 0 12 0c0-3.9-6-10.5-6-10.5z"/><path d="M9.2 14.6a2.9 2.9 0 0 0 2.4 2.5"/></svg></button>
   <button id="min" title="最小化"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
   <button id="close" class="close" title="隐藏到托盘 (Alt+Q 唤出)"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
 </div>
 <script>
   const $ = (id) => document.getElementById(id);
-  ['back', 'home', 'reload', 'fade', 'pin', 'immersive', 'min', 'close', 'zoomIn', 'zoomOut', 'tone', 'ticker'].forEach(id =>
+  ['back', 'home', 'reload', 'fade', 'pin', 'immersive', 'donate', 'min', 'close', 'zoomIn', 'zoomOut', 'tone', 'ticker'].forEach(id =>
     $(id).addEventListener('click', () => window.api.cmd(id)));
   $('zv').addEventListener('click', () => window.api.cmd('zoomReset'));
   $('auto').addEventListener('click', () => window.api.cmd('auto'));
@@ -149,6 +150,7 @@
   // ---------- 按常用程度收起按钮 ----------
   // 数字越小越不常用，窗口变窄时越先收起；拖动把手、书名、关闭永远显示
   const PRIORITY = [
+    ['donate', 5],       // 请作者喝瓶水（最先收起，⋯ 菜单和托盘里也有）
     ['op', 10],          // 透明度滑块（有 Alt+↑/↓）
     ['reload', 15],      // 刷新（有 F5）
     ['min', 20],         // 最小化（和关闭一样都是收到托盘）

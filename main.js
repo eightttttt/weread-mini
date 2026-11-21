@@ -807,6 +807,7 @@ ipcMain.on('cmd', (_e, cmd, val) => {
       cfg.opacity = Math.min(1, Math.max(0.2, Number(val) || 1)); applyOpacity(); saveCfg(); return;
     case 'immersive': setImmersive(cfg.showBar); return;
     case 'min': hideToTray(); break;
+    case 'donate': openDonate(); break;
     case 'close': hideToTray(); break;
   }
   sendState();
