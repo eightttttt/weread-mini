@@ -38,6 +38,8 @@
   #auto.on:hover { filter: brightness(1.08); }
   #autoMore { min-width: 14px; width: 14px; padding: 0; }
   #autoMore svg { width: 11px; height: 11px; }
+  #donate { color: #2a7cf0; }                 /* 水滴用微信读书蓝，在灰色按钮里稍微显眼一点 */
+  #donate:hover { color: #1c5fd6; }
   .title.flash { color: #22a55b; }
   input[type=range] { width: 56px; height: 4px; accent-color: #1b88ee; margin: 0 3px; flex-shrink: 0; }
   .sep { width: 1px; height: 16px; background: rgba(0,0,0,.12); margin: 0 2px; flex-shrink: 0; }
@@ -150,7 +152,6 @@
   // ---------- 按常用程度收起按钮 ----------
   // 数字越小越不常用，窗口变窄时越先收起；拖动把手、书名、关闭永远显示
   const PRIORITY = [
-    ['donate', 5],       // 请作者喝瓶水（最先收起，⋯ 菜单和托盘里也有）
     ['op', 10],          // 透明度滑块（有 Alt+↑/↓）
     ['reload', 15],      // 刷新（有 F5）
     ['min', 20],         // 最小化（和关闭一样都是收到托盘）
@@ -160,6 +161,7 @@
     ['home', 45],        // 书架（书页左下角另有按钮）
     ['pin', 50],         // 置顶（一般设一次）
     ['tone', 55],        // 色调
+    ['donate', 60],      // 请作者喝瓶水（尽量保留，让用户看得到；收起后在 ⋯ 菜单第一项）
     ['zoomGroup', 65],   // 字号 A− A+
     ['immersive', 70],   // 沉浸模式
     ['ticker', 80],      // 播报条
