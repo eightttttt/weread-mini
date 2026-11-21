@@ -1,5 +1,5 @@
 const {
-  app, BaseWindow, WebContentsView, Tray, Menu, nativeImage,
+  app, BaseWindow, BrowserWindow, WebContentsView, Tray, Menu, nativeImage,
   globalShortcut, ipcMain, screen, shell, session,
 } = require('electron');
 const path = require('path');
@@ -734,7 +734,41 @@ function moreMenu(hidden) {
   }
   if (has('min')) { items.push({ type: 'separator' }); items.push({ label: '隐藏到托盘', click: hideToTray }); }
   if (!items.length) return;
+  items.push({ type: 'separator' }, { label: '💧 请作者喝瓶水', click: openDonate });
   Menu.buildFromTemplate(items).popup({ window: win, x: Math.max(0, win.getContentBounds().width - 220), y: BAR_H });
+}
+
+// ---------- 请作者喝水（打赏） ----------
+// 收款码查找顺序：exe 旁边的 donate-wechat.png / donate-alipay.png（用户可自行替换）→ 打包进来的 donate/wechat.png / alipay.png
+let donateWin = null;
+function donateCode(name) {
+  const dirs = [[path.dirname(process.execPath), `donate-${name}`], [path.join(__dirname, 'donate'), name]];
+  for (const [dir, base] of dirs) {
+    for (const ext of ['png', 'jpg', 'jpeg']) {
+      const f = path.join(dir, `${base}.${ext}`);
+      try { if (fs.existsSync(f)) return `data:image/${ext === 'png' ? 'png' : 'jpeg'};base64,` + fs.readFileSync(f).toString('base64'); } catch {}
+    }
+  }
+  return '';
+}
+function openDonate() {
+  if (donateWin && !donateWin.isDestroyed()) { donateWin.show(); donateWin.focus(); return; }
+  const W = 316, H = 452;
+  const area = screen.getDisplayMatching(alive() ? win.getBounds() : { x: 0, y: 0, width: 1, height: 1 }).workArea;
+  donateWin = new BrowserWindow({
+    width: W, height: H, x: Math.round(area.x + (area.width - W) / 2), y: Math.round(area.y + (area.height - H) / 2),
+    frame: false, transparent: true, backgroundColor: '#00000000', resizable: false, maximizable: false, minimizable: false,
+    alwaysOnTop: true, skipTaskbar: true, show: false, hasShadow: false,
+    webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true },
+  });
+  donateWin.setMenu(null);
+  donateWin.loadFile(path.join(__dirname, 'donate.html'));
+  donateWin.webContents.once('did-finish-load', () => {
+    if (!donateWin || donateWin.isDestroyed()) return;
+    donateWin.webContents.executeJavaScript(`setCodes(${JSON.stringify({ wx: donateCode('wechat'), ali: donateCode('alipay') })})`).catch(() => {});
+    donateWin.show();
+  });
+  donateWin.on('closed', () => { donateWin = null; });
 }
 
 // ---------- 工具栏事件 ----------
@@ -808,6 +842,7 @@ function refreshTrayMenu() {
       page.webContents.loadURL(HOME);
     } },
     { type: 'separator' },
+    { label: '💧 请作者喝瓶水', click: openDonate },
     { label: '退出', click: () => { shutdown(); app.quit(); } },
   ]));
 }
