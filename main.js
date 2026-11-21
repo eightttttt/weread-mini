@@ -189,7 +189,10 @@ function applyMaterial() {
     if (process.platform === 'win32' && win.setBackgroundMaterial) win.setBackgroundMaterial(noMaterial ? 'none' : 'acrylic');
     if (IS_MAC && win.setVibrancy) win.setVibrancy(noMaterial ? null : 'hud');
   } catch {}
-  if (barAlive()) bar.webContents.send('glass', { clear: noMaterial, round: !!cfg.round });
+  // 圆角模式下书页顶部有 RADIUS 像素藏在工具栏下面（遮住书页的上圆角），工具栏用不透明底，
+  // 这样看不到下面的书页内容，工具栏和书页之间是一条干净的分界线（透明书页时保持半透明）
+  const solid = !!cfg.round && cfg.tone !== 'clear';
+  if (barAlive()) bar.webContents.send('glass', { clear: noMaterial, round: !!cfg.round, solid });
   tickerSend({ type: 'clear', clear: cfg.tickerClear });
 }
 function cycleTone() {

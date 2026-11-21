@@ -508,6 +508,28 @@ ${CTRL_CSS}
       return { x: r.x + r.width / 2, y: r.y + r.height / 2, to: b.classList.contains('isHorizontalReader') ? 'scroll' : 'page' };
     },
   };
+  // ---------- 滚动条：平时隐藏，滚动时或鼠标移到窗口右边缘时才出现 ----------
+  const SB_CSS = `
+    html, html * { scrollbar-width: thin !important; scrollbar-color: transparent transparent !important; }
+    html.wrm-sb, html.wrm-sb * { scrollbar-color: rgba(128,128,128,.55) transparent !important; }`;
+  const sbst = document.createElement('style'); sbst.id = '__wrm_sb_css'; sbst.textContent = SB_CSS;
+  (document.head || document.documentElement).appendChild(sbst);
+  let sbHideT = null, sbEdge = false;
+  function showSb(ms) {
+    root.classList.add('wrm-sb');
+    clearTimeout(sbHideT);
+    if (ms) sbHideT = setTimeout(() => { if (!sbEdge) root.classList.remove('wrm-sb'); }, ms);
+  }
+  window.addEventListener('scroll', () => showSb(900), { capture: true, passive: true });
+  window.addEventListener('wheel', () => showSb(900), { capture: true, passive: true });
+  window.addEventListener('mousemove', (e) => {
+    const near = e.clientX >= innerWidth - 16;                  // 鼠标在右边缘滚动条区域
+    if (near === sbEdge) return;
+    sbEdge = near;
+    if (near) showSb(0); else showSb(600);
+  }, { passive: true });
+  document.addEventListener('mouseleave', () => { sbEdge = false; showSb(300); });
+
   const tst = document.createElement('style'); tst.id = '__wrm_ticker_css'; tst.textContent = TICKER_CSS;
   (document.head || document.documentElement).appendChild(tst);
   css();

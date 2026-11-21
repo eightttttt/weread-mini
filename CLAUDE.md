@@ -35,7 +35,7 @@ Electron 45，一个 `BaseWindow`（无边框、`transparent: true`、背景 `#0
 - `layout()` 摆放三个视图；`layoutDeferred()` 拖动缩放时 350ms 防抖再排版。
 - 播报条开启时书页移到屏幕外 `x: -(width+100)`（不能只设透明，否则原文会透出来）。
 - 窗口材质 `applyMaterial()`：Windows `setBackgroundMaterial('acrylic')`。**透明色调 / 播报条 / 圆角模式下关闭**，因为系统材质只能是方的，会在圆角外露出方角。此时 bar 收到 `glass {clear:true}`，用更厚的半透明底。
-- 圆角（v2.18，`cfg.round` 默认开，托盘可关）：`page.setBorderRadius(RADIUS=8)`；工具栏显示时书页向上多伸 RADIUS 像素藏到工具栏下面遮住上圆角，并通过 `__wrm.setTop(px)` 让正文同步下移；工具栏自己用 CSS 圆上两角。注意：给容器 `View` 设圆角**不会**裁剪子视图，必须设在每个 WebContentsView 上。
+- 圆角（v2.18，`cfg.round` 默认开，托盘可关）：`page.setBorderRadius(RADIUS=8)`；工具栏显示时书页向上多伸 RADIUS 像素藏到工具栏下面遮住上圆角，并通过 `__wrm.setTop(px)` 让正文同步下移；工具栏自己用 CSS 圆上两角。v2.35 起圆角模式（非透明色调）下工具栏是不透明底（bar 收到 `glass.solid` → `body.solid`），盖住下面藏着的书页边，用户之前觉得半透明工具栏和页面“重叠”不好看。注意：给容器 `View` 设圆角**不会**裁剪子视图，必须设在每个 WebContentsView 上。
 - 拖动窗口：手动 IPC（`drag`）+ 锁定宽高 `setBounds`（否则 125% 缩放下拖动会越拖越大）。右下角 7px 调整大小走 `rsz` IPC。
 - 需要“真实点击”的微信读书控件（切换阅读方式等，网页检查 `isTrusted`）用 `webContents.sendInputEvent` 模拟。
 
@@ -68,6 +68,7 @@ Electron 45，一个 `BaseWindow`（无边框、`transparent: true`、背景 `#0
 - 工具栏（`bar.html`）：书名+页数玻璃块 `#tblock`（`#title` + `#prog`，进度由主进程每 400ms 发 `prog`）、缩放组、自动翻页组、播报条、色调、不透明度滑块、隐身、置顶、沉浸、`⋯` 更多、最小化、关闭。窗口变窄时 `fitBar()` 按优先级收起（数字小先收）：donate 5, op 10, reload 15, min 20, zv 30, back 35, autoMore 40, home 45, pin 50, tone 55, zoomGroup 65, immersive 70, ticker 80, autoGroup 85, fade 90, prog 95；收起的进 `⋯` 菜单（主进程 `moreMenu`）。
 - `inject.js`：窄边距 CSS（`T=12` 顶、`B=10` 底，左右 `M`）、点击左/右 1/3 翻页（120ms 延迟，弹窗打开时跳过）、左下书架按钮 `#__wrm_shelf` / 右下 ☰ `#__wrm_tg`（`fitButtons()` 按窗口宽度缩放，除以 zoom）、位置记忆（localStorage `wrm_pos`）、`window.__wrm` API（next/prev/scroll/pageText/progress/setTop…）。
 - 播报条（`main.js` ticker 段 + `ticker.html`）：速度 `TICKER_SPEEDS`、字号 `TICKER_FONTS`、高度 = 字号×2+8；左侧 34px 功能区悬停才出现按钮（暂停、字号−+、背景、快、慢）；滚轮调速、Ctrl+滚轮调字号、双击/Esc 退出；文字取自 `__wrm.pageText()`，读完自动翻页续上（`awaiting` 防重复翻页），退出时翻回原页。看不见时自动停住：`syncTickerHold()`（隐身 / 隐藏到托盘 / 最小化）给 ticker 发 `hold`，与手动暂停 `paused` 互相独立。
+- 滚动条（v2.35，`inject.js` 的 `SB_CSS`）：用标准属性 `scrollbar-color` 平时设为透明，滚动/滚轮时显示 0.9 秒，鼠标在窗口右边缘 16px 内时一直显示（`html.wrm-sb`）。
 - 全局快捷键见 README。
 
 ## 测试方法
@@ -88,4 +89,4 @@ npm run pack:win   # electron-packager，asar，输出 dist/WeReadMini-win32-x64
 
 ## 版本历史（摘要）
 
-v1.x 基础小窗、置顶、托盘、隐身、自动翻页、窄边距、点击翻页、收纳菜单 → v2.1 按 1.9 重做字号/按钮缩放 → v2.3 首次上传 GitHub → v2.4 修自动乱翻页、毛玻璃工具栏、透明背景 → v2.5 书架/☰ 移到下方两角 → v2.6–2.11 播报条及其修复 → v2.12 工具栏优先级收起 → v2.13–2.14 进度显示移到工具栏 → v2.15–2.16 修划线错位 → v2.17 书名+页数玻璃块 → v2.18 圆角窗口 → v2.19 请作者喝瓶水（打赏弹窗）→ v2.20 打赏弹窗改深色毛玻璃 + 收款码 → v2.21 播报条隐身/隐藏时自动暂停 → v2.22 打赏文案 → v2.23 工具栏水滴打赏按钮 → v2.24 水滴蓝色、优先级 60、⋯ 菜单置顶 → v2.25 水滴改灰色、移到 ⋯ 左边 → v2.26 水滴最先收起（优先级 5）→ v2.27 ⋯ 菜单里打赏移到最底部、去掉表情（此版漏了 bar.html，工具栏消失）→ v2.28 恢复 bar.html + 打包后自动检查文件 → v2.29 小红书反馈入口 → v2.30 显示 @东尼滝谷，去掉“自愿支持”一行 → v2.31 反馈信息分两行 + 可替换图标 → v2.32 用户提供的小红书图标 → v2.33 检查新版本 → v2.34 网页改版自动降级。详见 `git log`。
+v1.x 基础小窗、置顶、托盘、隐身、自动翻页、窄边距、点击翻页、收纳菜单 → v2.1 按 1.9 重做字号/按钮缩放 → v2.3 首次上传 GitHub → v2.4 修自动乱翻页、毛玻璃工具栏、透明背景 → v2.5 书架/☰ 移到下方两角 → v2.6–2.11 播报条及其修复 → v2.12 工具栏优先级收起 → v2.13–2.14 进度显示移到工具栏 → v2.15–2.16 修划线错位 → v2.17 书名+页数玻璃块 → v2.18 圆角窗口 → v2.19 请作者喝瓶水（打赏弹窗）→ v2.20 打赏弹窗改深色毛玻璃 + 收款码 → v2.21 播报条隐身/隐藏时自动暂停 → v2.22 打赏文案 → v2.23 工具栏水滴打赏按钮 → v2.24 水滴蓝色、优先级 60、⋯ 菜单置顶 → v2.25 水滴改灰色、移到 ⋯ 左边 → v2.26 水滴最先收起（优先级 5）→ v2.27 ⋯ 菜单里打赏移到最底部、去掉表情（此版漏了 bar.html，工具栏消失）→ v2.28 恢复 bar.html + 打包后自动检查文件 → v2.29 小红书反馈入口 → v2.30 显示 @东尼滝谷，去掉“自愿支持”一行 → v2.31 反馈信息分两行 + 可替换图标 → v2.32 用户提供的小红书图标 → v2.33 检查新版本 → v2.34 网页改版自动降级 → v2.35 工具栏不透明分界、滚动条自动隐藏。详见 `git log`。
