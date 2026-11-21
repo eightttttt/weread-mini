@@ -25,7 +25,7 @@ Electron 45，一个 `BaseWindow`（无边框、`transparent: true`、背景 `#0
 | `page` | weread.qq.com，partition `persist:weread`，preload `page-preload.js` | 书页；`inject.js` 在 dom-ready 和页内跳转时用 `executeJavaScript` 注入（`__MARGIN__` 用 `replaceAll` 替换） |
 | `ticker` | `ticker.html` | 播报条（单行滚动） |
 
-另有独立小窗 `donate.html`（`openDonate()`，BrowserWindow）：“请作者喝瓶水”打赏弹窗，入口在托盘菜单和 `⋯` 菜单末尾。收款码先找 exe 旁的 `donate-wechat.png`/`donate-alipay.png`，再找仓库 `donate/wechat.png`/`alipay.png`。用户决定：软件免费，只做自愿打赏，不收费。
+另有独立小窗 `donate.html`（`openDonate()`，BrowserWindow）：“请作者喝瓶水”打赏弹窗，入口在托盘菜单和 `⋯` 菜单末尾。收款码先找 exe 旁的 `donate-wechat.png`/`donate-alipay.png`，再找仓库 `donate/wechat.png`/`alipay.png`。用户决定：软件免费，只做自愿打赏，不收费。弹窗风格按用户要求：克制、不要太可爱，深色毛玻璃（窗口非 transparent + `backgroundMaterial: 'acrylic'`，让 Win11 给系统圆角），配色跟微信读书图标的蓝色渐变。`donate/*.png` 是用收款链接重新生成的纯二维码（不含用户头像、名字、ID）。
 
 - `main.js`：窗口、托盘、快捷键、自动翻页、隐身（fade）、色调、播报条、配置（userData 里的 json，默认值在 `cfg` 定义处）。
 - `alive()` / `barAlive()` 守卫 + `shutdown()` 清定时器 —— 退出时 “Object has been destroyed” 崩溃就是靠这个修的，新增定时器/回调都要加守卫。
@@ -83,4 +83,4 @@ npm run pack:win   # electron-packager，asar，输出 dist/WeReadMini-win32-x64
 
 ## 版本历史（摘要）
 
-v1.x 基础小窗、置顶、托盘、隐身、自动翻页、窄边距、点击翻页、收纳菜单 → v2.1 按 1.9 重做字号/按钮缩放 → v2.3 首次上传 GitHub → v2.4 修自动乱翻页、毛玻璃工具栏、透明背景 → v2.5 书架/☰ 移到下方两角 → v2.6–2.11 播报条及其修复 → v2.12 工具栏优先级收起 → v2.13–2.14 进度显示移到工具栏 → v2.15–2.16 修划线错位 → v2.17 书名+页数玻璃块 → v2.18 圆角窗口 → v2.19 请作者喝瓶水（打赏弹窗）。详见 `git log`。
+v1.x 基础小窗、置顶、托盘、隐身、自动翻页、窄边距、点击翻页、收纳菜单 → v2.1 按 1.9 重做字号/按钮缩放 → v2.3 首次上传 GitHub → v2.4 修自动乱翻页、毛玻璃工具栏、透明背景 → v2.5 书架/☰ 移到下方两角 → v2.6–2.11 播报条及其修复 → v2.12 工具栏优先级收起 → v2.13–2.14 进度显示移到工具栏 → v2.15–2.16 修划线错位 → v2.17 书名+页数玻璃块 → v2.18 圆角窗口 → v2.19 请作者喝瓶水（打赏弹窗）→ v2.20 打赏弹窗改深色毛玻璃 + 收款码。详见 `git log`。

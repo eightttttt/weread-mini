@@ -9,6 +9,7 @@ const HOME = 'https://weread.qq.com/';
 const BAR_H = 30;
 const RADIUS = 8;    // 圆角窗口的圆角半径（像素）
 const IS_MAC = process.platform === 'darwin';
+const IS_WIN = process.platform === 'win32';
 const ALT = IS_MAC ? '⌥' : 'Alt+';   // 菜单/提示里显示的快捷键写法
 const MARGINS_OK = [-1, 32, 16, 8, 2];
 const ZOOMS = [0.6, 0.7, 0.8, 0.9, 1, 1.1, 1.25, 1.4, 1.6, 1.8, 2, 2.3, 2.6, 3];
@@ -753,12 +754,15 @@ function donateCode(name) {
 }
 function openDonate() {
   if (donateWin && !donateWin.isDestroyed()) { donateWin.show(); donateWin.focus(); return; }
-  const W = 316, H = 452;
+  const W = 280, H = 466;
   const area = screen.getDisplayMatching(alive() ? win.getBounds() : { x: 0, y: 0, width: 1, height: 1 }).workArea;
+  // 不用 transparent：这样 Win11 会给无边框窗口加系统圆角，同时可以开系统毛玻璃（acrylic）。
+  // 不支持毛玻璃的系统上退回深色底（页面本身是深色半透明叠在深色窗口底色上）。
   donateWin = new BrowserWindow({
     width: W, height: H, x: Math.round(area.x + (area.width - W) / 2), y: Math.round(area.y + (area.height - H) / 2),
-    frame: false, transparent: true, backgroundColor: '#00000000', resizable: false, maximizable: false, minimizable: false,
-    alwaysOnTop: true, skipTaskbar: true, show: false, hasShadow: false,
+    frame: false, transparent: false, backgroundColor: IS_WIN ? '#00000000' : '#1c2028', resizable: false, maximizable: false,
+    minimizable: false, fullscreenable: false, alwaysOnTop: true, skipTaskbar: true, show: false,
+    ...(IS_WIN ? { backgroundMaterial: 'acrylic' } : {}), ...(IS_MAC ? { vibrancy: 'hud' } : {}),
     webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true },
   });
   donateWin.setMenu(null);
