@@ -44,6 +44,9 @@
   .ok:hover { background: rgba(42,124,240,.32); color: #fff; }
   .foot { font-size: 11px; color: rgba(230,234,240,.38); margin-top: 8px; }
 
+  .xhs { display: inline-block; margin-top: 6px; font-size: 11px; color: rgba(140,190,255,.75); text-decoration: none;
+    -webkit-app-region: no-drag; cursor: pointer; }
+  .xhs:hover { color: #8cc4ff; text-decoration: underline; }
   .done { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
     background: linear-gradient(170deg, rgba(34,40,52,.92), rgba(20,23,30,.95)); }
   .done.show { display: flex; animation: fade .3s ease-out; }
@@ -72,6 +75,7 @@
 
   <button class="ok" id="ok">已支持</button>
   <div class="foot">自愿支持，不影响任何功能</div>
+  <a class="xhs" id="xhs" href="#" title="在浏览器中打开">反馈与新版本：小红书主页 ›</a>
 
   <div class="done" id="done">
     <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true">
@@ -91,12 +95,15 @@
     $('hint').textContent = codes[k] ? HINT[k] : '';
   }
   // 主进程注入收款码（data URL）；只有一种码时隐藏切换按钮
+  let xhs = '';
   window.setCodes = (c) => {
+    xhs = c.xhs || ''; $('xhs').style.display = xhs ? '' : 'none';
     codes = { wx: c.wx || '', ali: c.ali || '' };
     $('tabs').style.display = (codes.wx && codes.ali) || (!codes.wx && !codes.ali) ? '' : 'none';
     show(codes.wx || !codes.ali ? 'wx' : 'ali');
   };
   document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => show(t.dataset.k)));
+  $('xhs').addEventListener('click', (e) => { e.preventDefault(); if (xhs) window.open(xhs); });
   $('close').addEventListener('click', () => window.close());
   addEventListener('keydown', (e) => { if (e.key === 'Escape') window.close(); });
   $('ok').addEventListener('click', () => { $('done').classList.add('show'); setTimeout(() => window.close(), 1600); });

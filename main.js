@@ -751,6 +751,7 @@ function moreMenu(hidden) {
 
 // ---------- 请作者喝水（打赏） ----------
 // 收款码查找顺序：exe 旁边的 donate-wechat.png / donate-alipay.png（用户可自行替换）→ 打包进来的 donate/wechat.png / alipay.png
+const XHS_URL = 'https://xhslink.cn/o/32REWxd38Tp';   // 作者小红书主页：反馈与新版本发布
 let donateWin = null;
 function donateCode(name) {
   const dirs = [[path.dirname(process.execPath), `donate-${name}`], [path.join(__dirname, 'donate'), name]];
@@ -764,7 +765,7 @@ function donateCode(name) {
 }
 function openDonate() {
   if (donateWin && !donateWin.isDestroyed()) { donateWin.show(); donateWin.focus(); return; }
-  const W = 280, H = 466;
+  const W = 280, H = 484;
   const area = screen.getDisplayMatching(alive() ? win.getBounds() : { x: 0, y: 0, width: 1, height: 1 }).workArea;
   // 不用 transparent：这样 Win11 会给无边框窗口加系统圆角，同时可以开系统毛玻璃（acrylic）。
   // 不支持毛玻璃的系统上退回深色底（页面本身是深色半透明叠在深色窗口底色上）。
@@ -776,10 +777,14 @@ function openDonate() {
     webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true },
   });
   donateWin.setMenu(null);
+  donateWin.webContents.setWindowOpenHandler(({ url }) => {   // 弹窗里的链接用系统浏览器打开
+    if (url === XHS_URL) shell.openExternal(url);
+    return { action: 'deny' };
+  });
   donateWin.loadFile(path.join(__dirname, 'donate.html'));
   donateWin.webContents.once('did-finish-load', () => {
     if (!donateWin || donateWin.isDestroyed()) return;
-    donateWin.webContents.executeJavaScript(`setCodes(${JSON.stringify({ wx: donateCode('wechat'), ali: donateCode('alipay') })})`).catch(() => {});
+    donateWin.webContents.executeJavaScript(`setCodes(${JSON.stringify({ wx: donateCode('wechat'), ali: donateCode('alipay'), xhs: XHS_URL })})`).catch(() => {});
     donateWin.show();
   });
   donateWin.on('closed', () => { donateWin = null; });
@@ -857,6 +862,7 @@ function refreshTrayMenu() {
       page.webContents.loadURL(HOME);
     } },
     { type: 'separator' },
+    { label: '反馈与更新（小红书）', click: () => shell.openExternal(XHS_URL) },
     { label: '请作者喝瓶水', click: openDonate },
     { label: '退出', click: () => { shutdown(); app.quit(); } },
   ]));
