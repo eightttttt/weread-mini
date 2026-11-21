@@ -2,7 +2,7 @@
 const path = require('path');
 const asar = require('@electron/asar');
 const REQUIRED = ['main.js', 'preload.js', 'page-preload.js', 'inject.js', 'bar.html', 'ticker.html', 'donate.html',
-  'package.json', 'icon.png', 'tray.png', 'donate/wechat.png', 'donate/alipay.png'];
+  'package.json', 'icon.png', 'tray.png', 'donate/wechat.png', 'donate/alipay.png', 'donate/xhs.png'];
 const file = path.join(__dirname, '..', 'dist', 'WeReadMini-win32-x64', 'resources', 'app.asar');
 const list = new Set(asar.listPackage(file).map((p) => p.replace(/\\/g, '/').replace(/^\//, '')));
 const missing = REQUIRED.filter((f) => !list.has(f));
