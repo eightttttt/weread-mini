@@ -38,8 +38,6 @@
   #auto.on:hover { filter: brightness(1.08); }
   #autoMore { min-width: 14px; width: 14px; padding: 0; }
   #autoMore svg { width: 11px; height: 11px; }
-  #donate { color: #2a7cf0; }                 /* 水滴用微信读书蓝，在灰色按钮里稍微显眼一点 */
-  #donate:hover { color: #1c5fd6; }
   .title.flash { color: #22a55b; }
   input[type=range] { width: 56px; height: 4px; accent-color: #1b88ee; margin: 0 3px; flex-shrink: 0; }
   .sep { width: 1px; height: 16px; background: rgba(0,0,0,.12); margin: 0 2px; flex-shrink: 0; }
@@ -92,8 +90,8 @@
   <button id="fade" title="鼠标移开自动隐身（完全透明且不挡鼠标；托盘菜单可调隐身程度）"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
   <button id="pin" title="窗口置顶"><svg viewBox="0 0 24 24"><path d="M12 17v5"/><path d="M9 3h6l-1 6 3 3v2H7v-2l3-3z"/></svg></button>
   <button id="immersive" title="沉浸模式 (Ctrl+H)：工具栏自动隐藏，鼠标移到窗口顶部即出现"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
-  <button id="more" title="更多功能（窗口太窄时收起的按钮在这里）">⋯</button>
   <button id="donate" title="请作者喝瓶水"><svg viewBox="0 0 24 24"><path d="M12 3.5C12 3.5 6 10.1 6 14a6 6 0 0 0 12 0c0-3.9-6-10.5-6-10.5z"/><path d="M9.2 14.6a2.9 2.9 0 0 0 2.4 2.5"/></svg></button>
+  <button id="more" title="更多功能（窗口太窄时收起的按钮在这里）">⋯</button>
   <button id="min" title="最小化"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
   <button id="close" class="close" title="隐藏到托盘 (Alt+Q 唤出)"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
 </div>
@@ -160,8 +158,8 @@
     ['autoMore', 40],    // 自动翻页设置 ▾
     ['home', 45],        // 书架（书页左下角另有按钮）
     ['pin', 50],         // 置顶（一般设一次）
+    ['donate', 52],      // 请作者喝瓶水（置顶之后、色调之前收起；收起后在 ⋯ 菜单第一项）
     ['tone', 55],        // 色调
-    ['donate', 60],      // 请作者喝瓶水（尽量保留，让用户看得到；收起后在 ⋯ 菜单第一项）
     ['zoomGroup', 65],   // 字号 A− A+
     ['immersive', 70],   // 沉浸模式
     ['ticker', 80],      // 播报条
