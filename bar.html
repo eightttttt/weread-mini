@@ -38,7 +38,8 @@
   #auto.on:hover { filter: brightness(1.08); }
   #autoMore { min-width: 14px; width: 14px; padding: 0; }
   #autoMore svg { width: 11px; height: 11px; }
-  .title.flash { color: #22a55b; }
+  .title.flash { color: #22a55b; min-width: max-content; }
+  .tblock:has(.title.flash) { flex-shrink: 0; }   /* 提示文字完整显示，必要时临时收起几个按钮 */
   input[type=range] { width: 56px; height: 4px; accent-color: #1b88ee; margin: 0 3px; flex-shrink: 0; }
   .sep { width: 1px; height: 16px; background: rgba(0,0,0,.12); margin: 0 2px; flex-shrink: 0; }
   /* 拖动把手 + 书名区域始终保留，窗口变窄时先收起次要按钮 */
@@ -121,8 +122,9 @@
   let flashT = null, curTitle = '微信读书';
   window.api.onFlash((msg) => {
     clearTimeout(flashT);
-    $('title').textContent = msg; $('title').classList.add('flash');
-    flashT = setTimeout(() => { $('title').textContent = curTitle; $('title').classList.remove('flash'); }, 1500);
+    const text = typeof msg === 'object' ? msg.text : msg, ms = (typeof msg === 'object' && msg.ms) || 1500;
+    $('title').textContent = text; $('title').classList.add('flash'); fitBar();
+    flashT = setTimeout(() => { $('title').textContent = curTitle; $('title').classList.remove('flash'); fitBar(); }, ms);
   });
   $('op').addEventListener('input', (e) => window.api.cmd('opacity', e.target.value / 100));
   window.addEventListener('wheel', (e) => {           // 在工具栏上 Ctrl+滚轮 也能调字号

@@ -1,6 +1,6 @@
 const {
   app, BaseWindow, BrowserWindow, WebContentsView, Tray, Menu, nativeImage,
-  globalShortcut, ipcMain, screen, shell, session,
+  globalShortcut, ipcMain, screen, shell, session, net, dialog,
 } = require('electron');
 const path = require('path');
 const fs = require('fs');
@@ -329,7 +329,8 @@ function autoAdjust(dir) {          // 调快/调慢（按当前阅读方式）
 }
 function flashBar(msg) {
   if (bar && !bar.webContents.isDestroyed()) bar.webContents.send('flash', msg);
-  if (!cfg.showBar && !peek) { peek = true; layout(); setTimeout(() => { if (!alive()) return; peek = false; layout(); }, 1500); }
+  const ms = (typeof msg === 'object' && msg.ms) || 1500;
+  if (!cfg.showBar && !peek) { peek = true; layout(); setTimeout(() => { if (!alive()) return; peek = false; layout(); }, ms); }
 }
 function autoMenu() {
   return [
@@ -828,10 +829,68 @@ function setFade(v) {
 }
 
 // ---------- 托盘 ----------
+// ---------- 检查新版本 ----------
+// 仓库里的 version.json 写着最新版本号和下载地址；先走国内能访问的 jsDelivr 镜像，再走 GitHub 原站。
+// 启动 15 秒后查一次，之后每 12 小时查一次；有新版时托盘菜单第一项提示，工具栏书名处闪一下（每个新版本只闪一次）。
+const UPDATE_SOURCES = [
+  'https://cdn.jsdelivr.net/gh/eightttttt/weread-mini@main/version.json',
+  'https://fastly.jsdelivr.net/gh/eightttttt/weread-mini@main/version.json',
+  'https://raw.githubusercontent.com/eightttttt/weread-mini/main/version.json',
+];
+let update = null;          // { version, url, notes }：发现的新版本
+let updateTimer = null;
+function verNum(v) { return String(v || '').replace(/^v/i, '').split('.').map((n) => parseInt(n, 10) || 0); }
+function newerThan(a, b) {
+  const x = verNum(a), y = verNum(b);
+  for (let i = 0; i < Math.max(x.length, y.length); i++) { if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); }
+  return false;
+}
+async function fetchVersionInfo() {
+  for (const src of UPDATE_SOURCES) {
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), 8000);
+    try {
+      const r = await net.fetch(src + '?t=' + Date.now(), { signal: ctl.signal, cache: 'no-store' });
+      if (r.ok) { const j = await r.json(); if (j && j.version) return j; }
+    } catch {} finally { clearTimeout(t); }
+  }
+  return null;
+}
+async function checkUpdate(manual) {
+  const info = await fetchVersionInfo();
+  if (quitting) return;
+  if (!info) {
+    if (manual) dialog.showMessageBox({ type: 'info', title: '检查新版本', message: '暂时连不上更新服务器',
+      detail: `请稍后再试，也可以在小红书 @东尼滝谷 查看新版本。\n当前版本：v${app.getVersion()}`, buttons: ['好的'] });
+    return;
+  }
+  const has = newerThan(info.version, app.getVersion());
+  update = has ? { version: String(info.version).replace(/^v/i, ''), url: info.url || XHS_URL, notes: info.notes || '' } : null;
+  refreshTrayMenu();
+  if (has && cfg.updNotified !== update.version) {
+    cfg.updNotified = update.version; saveCfg();
+    flashBar({ text: `新版本 v${update.version}`, ms: 5000 });   // 详情和下载在托盘菜单第一项
+  }
+  if (manual) {
+    if (has) {
+      const r = await dialog.showMessageBox({ type: 'info', title: '检查新版本', message: `发现新版本 v${update.version}`,
+        detail: `当前版本：v${app.getVersion()}${update.notes ? '\n\n' + update.notes : ''}`, buttons: ['去下载', '以后再说'], defaultId: 0, cancelId: 1 });
+      if (r.response === 0) shell.openExternal(update.url);
+    } else {
+      dialog.showMessageBox({ type: 'info', title: '检查新版本', message: '已经是最新版本', detail: `当前版本：v${app.getVersion()}`, buttons: ['好的'] });
+    }
+  }
+}
+function startUpdateCheck() {
+  setTimeout(() => { if (!quitting) checkUpdate(false); }, 15000);
+  updateTimer = setInterval(() => { if (!quitting) checkUpdate(false); }, 12 * 3600 * 1000);
+}
+
 function refreshTrayMenu() {
   if (!tray || tray.isDestroyed() || quitting) return;
   const login = app.getLoginItemSettings().openAtLogin;
   tray.setContextMenu(Menu.buildFromTemplate([
+    ...(update ? [{ label: `⬆ 有新版本 v${update.version}（点击下载）`, click: () => shell.openExternal(update.url) }, { type: 'separator' }] : []),
     { label: `显示 / 隐藏　${ALT}Q`, click: toggleShow },
     { type: 'separator' },
     { label: `字体大小（${Math.round(cfg.zoom * 100)}%）`, submenu: zoomMenu() },
@@ -862,6 +921,7 @@ function refreshTrayMenu() {
       page.webContents.loadURL(HOME);
     } },
     { type: 'separator' },
+    { label: `检查新版本（当前 v${app.getVersion()}）`, click: () => checkUpdate(true) },
     { label: '反馈与更新（小红书 @东尼滝谷）', click: () => shell.openExternal(XHS_URL) },
     { label: '请作者喝瓶水', click: openDonate },
     { label: '退出', click: () => { shutdown(); app.quit(); } },
@@ -906,7 +966,7 @@ app.on('second-instance', () => { if (win) showWin(); });
 function shutdown() {
   if (quitting) return;
   quitting = true;
-  clearInterval(watchTimer); clearInterval(autoTimer); clearInterval(dragTimer); clearInterval(rszTimer);
+  clearInterval(watchTimer); clearInterval(autoTimer); clearInterval(updateTimer); clearInterval(dragTimer); clearInterval(rszTimer);
   clearTimeout(saveTimer);
   try { fs.writeFileSync(cfgFile(), JSON.stringify(cfg, null, 2)); } catch {}   // 退出前立即保存设置
 }
@@ -935,4 +995,5 @@ app.whenReady().then(() => {
   createWindow();
   createTray();
   registerKeys();
+  startUpdateCheck();
 });
