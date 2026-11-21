@@ -713,7 +713,6 @@ async function closePanelOrImmersive(onlyPanel) {
 function moreMenu(hidden) {
   const has = (id) => hidden.includes(id);
   const items = [];
-  if (has('donate')) items.push({ label: '💧 请作者喝瓶水', click: openDonate }, { type: 'separator' });   // 打赏收起时放第一项
   if (has('back')) items.push({ label: '后退', enabled: page.webContents.navigationHistory.canGoBack(), click: () => page.webContents.navigationHistory.goBack() });
   if (has('home')) items.push({ label: '返回书架', click: () => page.webContents.loadURL(HOME + 'web/shelf') });
   if (has('reload')) items.push({ label: '刷新', accelerator: 'F5', click: () => page.webContents.reload() });
@@ -743,6 +742,8 @@ function moreMenu(hidden) {
     if (has('immersive')) items.push({ label: '沉浸模式（工具栏自动隐藏）', type: 'checkbox', checked: !cfg.showBar, accelerator: 'CmdOrCtrl+H', click: (i) => setImmersive(i.checked) });
   }
   if (has('min')) { items.push({ type: 'separator' }); items.push({ label: '隐藏到托盘', click: hideToTray }); }
+  if (has('donate')) items.push({ type: 'separator' }, { label: '请作者喝瓶水', click: openDonate });   // 打赏收起时放在最底部，不抢眼
+  while (items.length && items[0].type === 'separator') items.shift();
   while (items.length && items[items.length - 1].type === 'separator') items.pop();
   if (!items.length) return;
   Menu.buildFromTemplate(items).popup({ window: win, x: Math.max(0, win.getContentBounds().width - 220), y: BAR_H });
@@ -856,7 +857,7 @@ function refreshTrayMenu() {
       page.webContents.loadURL(HOME);
     } },
     { type: 'separator' },
-    { label: '💧 请作者喝瓶水', click: openDonate },
+    { label: '请作者喝瓶水', click: openDonate },
     { label: '退出', click: () => { shutdown(); app.quit(); } },
   ]));
 }
