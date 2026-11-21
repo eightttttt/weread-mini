@@ -508,6 +508,26 @@ ${CTRL_CSS}
       return { x: r.x + r.width / 2, y: r.y + r.height / 2, to: b.classList.contains('isHorizontalReader') ? 'scroll' : 'page' };
     },
   };
+  // ---------- 书架 / 首页顶部导航：窗口窄或字号放大时，保留“微信读书”标志、搜索框和头像 ----------
+  // 微信读书网页宽度 ≤720px 时会隐藏标志和头像菜单，只剩搜索框；标志能点回首页，头像菜单能退出登录等，这里把它们留住。
+  // 极窄时（≤300px）标志只显示图标部分，把空间留给搜索框。
+  const NAV_CSS = `
+    @media (max-width: 720px) {
+      .navBar_inner { padding: 0 16px !important; gap: 10px; }
+      .navBar_logo { display: block !important; flex: 0 0 auto; margin-right: 0 !important; }
+      .navBar_input { min-width: 0; margin: 0 !important; height: 36px !important; font-size: 14px !important; background-position: 12px 8px !important; }
+      .navBar .menu_container { display: block !important; flex: 0 0 auto; }
+      .navBar .navBar_avatar { display: block !important; margin-left: 0 !important; }
+      .navBar_separator, .navBar .navBar_link:not(.navBar_link_Login) { display: none !important; }
+      .navBar .navBar_link_Login { display: inline-block !important; flex: 0 0 auto; margin-left: 0 !important; white-space: nowrap; }
+    }
+    @media (max-width: 420px) { .navBar_inner { padding: 0 12px !important; gap: 8px; } }
+    @media (max-width: 300px) {
+      .navBar_logo { width: 32px !important; background-size: auto 32px !important; background-position: left center !important; }
+    }`;
+  const navst = document.createElement('style'); navst.id = '__wrm_nav_css'; navst.textContent = NAV_CSS;
+  (document.head || document.documentElement).appendChild(navst);
+
   // ---------- 滚动条：平时隐藏，滚动时或鼠标移到窗口右边缘时才出现 ----------
   const SB_CSS = `
     html, html * { scrollbar-width: thin !important; scrollbar-color: transparent transparent !important; }

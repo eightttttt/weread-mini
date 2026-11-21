@@ -771,8 +771,6 @@ function moreMenu(hidden) {
 // 收款码查找顺序：exe 旁边的 donate-wechat.png / donate-alipay.png（用户可自行替换）→ 打包进来的 donate/wechat.png / alipay.png
 const XHS_URL = 'https://xhslink.cn/o/32REWxd38Tp';   // 作者小红书主页：反馈与新版本发布
 let donateWin = null;
-// 系统毛玻璃需要 Win11 22H2（内部版本 22621）及以上；更早的系统用浅色实底，避免透出黑底
-const ACRYLIC_OK = IS_WIN && (parseInt(require('os').release().split('.')[2], 10) || 0) >= 22621;
 function donateCode(name) {
   const dirs = [[path.dirname(process.execPath), `donate-${name}`], [path.join(__dirname, 'donate'), name]];
   for (const [dir, base] of dirs) {
@@ -787,13 +785,11 @@ function openDonate() {
   if (donateWin && !donateWin.isDestroyed()) { donateWin.show(); donateWin.focus(); return; }
   const W = 280, H = 494;
   const area = screen.getDisplayMatching(alive() ? win.getBounds() : { x: 0, y: 0, width: 1, height: 1 }).workArea;
-  // 不用 transparent：这样 Win11 会给无边框窗口加系统圆角，同时可以开系统毛玻璃（acrylic）。
-  // 不支持毛玻璃的系统上退回深色底（页面本身是深色半透明叠在深色窗口底色上）。
+  // 透明窗口 + 页面里画 8px 圆角卡片，和小窗的圆角一致（系统毛玻璃只能是方的，所以不用）
   donateWin = new BrowserWindow({
     width: W, height: H, x: Math.round(area.x + (area.width - W) / 2), y: Math.round(area.y + (area.height - H) / 2),
-    frame: false, transparent: false, backgroundColor: ACRYLIC_OK ? '#00000000' : '#f3f5f8', resizable: false, maximizable: false,
+    frame: false, transparent: true, backgroundColor: '#00000000', hasShadow: false, resizable: false, maximizable: false,
     minimizable: false, fullscreenable: false, alwaysOnTop: true, skipTaskbar: true, show: false,
-    ...(ACRYLIC_OK ? { backgroundMaterial: 'acrylic' } : {}), ...(IS_MAC ? { vibrancy: 'sidebar' } : {}),
     webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true },
   });
   donateWin.setMenu(null);
