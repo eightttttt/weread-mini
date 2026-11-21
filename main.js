@@ -771,6 +771,8 @@ function moreMenu(hidden) {
 // 收款码查找顺序：exe 旁边的 donate-wechat.png / donate-alipay.png（用户可自行替换）→ 打包进来的 donate/wechat.png / alipay.png
 const XHS_URL = 'https://xhslink.cn/o/32REWxd38Tp';   // 作者小红书主页：反馈与新版本发布
 let donateWin = null;
+// 系统毛玻璃需要 Win11 22H2（内部版本 22621）及以上；更早的系统用浅色实底，避免透出黑底
+const ACRYLIC_OK = IS_WIN && (parseInt(require('os').release().split('.')[2], 10) || 0) >= 22621;
 function donateCode(name) {
   const dirs = [[path.dirname(process.execPath), `donate-${name}`], [path.join(__dirname, 'donate'), name]];
   for (const [dir, base] of dirs) {
@@ -789,9 +791,9 @@ function openDonate() {
   // 不支持毛玻璃的系统上退回深色底（页面本身是深色半透明叠在深色窗口底色上）。
   donateWin = new BrowserWindow({
     width: W, height: H, x: Math.round(area.x + (area.width - W) / 2), y: Math.round(area.y + (area.height - H) / 2),
-    frame: false, transparent: false, backgroundColor: IS_WIN ? '#00000000' : '#1c2028', resizable: false, maximizable: false,
+    frame: false, transparent: false, backgroundColor: ACRYLIC_OK ? '#00000000' : '#f3f5f8', resizable: false, maximizable: false,
     minimizable: false, fullscreenable: false, alwaysOnTop: true, skipTaskbar: true, show: false,
-    ...(IS_WIN ? { backgroundMaterial: 'acrylic' } : {}), ...(IS_MAC ? { vibrancy: 'hud' } : {}),
+    ...(ACRYLIC_OK ? { backgroundMaterial: 'acrylic' } : {}), ...(IS_MAC ? { vibrancy: 'sidebar' } : {}),
     webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true },
   });
   donateWin.setMenu(null);
@@ -802,8 +804,13 @@ function openDonate() {
   donateWin.loadFile(path.join(__dirname, 'donate.html'));
   donateWin.webContents.once('did-finish-load', () => {
     if (!donateWin || donateWin.isDestroyed()) return;
-    donateWin.webContents.executeJavaScript(`setCodes(${JSON.stringify({ wx: donateCode('wechat'), ali: donateCode('alipay'), xhs: XHS_URL, xhsIcon: donateCode('xhs') })})`).catch(() => {});
-    donateWin.show();
+    donateWin.webContents.executeJavaScript(`setCodes(${JSON.stringify({ wx: donateCode('wechat'), ali: donateCode('alipay'), xhs: XHS_URL, xhsIcon: donateCode('xhs') })}); new Promise((r) => setTimeout(() => r(contentHeight()), 60))`)
+      .then((h) => {                                       // 窗口高度贴合内容，上下留白一致
+        if (!donateWin || donateWin.isDestroyed()) return;
+        if (h > 200 && h < 900) { donateWin.setContentSize(W, h); const b = donateWin.getBounds(); donateWin.setBounds({ ...b, y: Math.round(area.y + (area.height - b.height) / 2) }); }
+      })
+      .catch(() => {})
+      .finally(() => { if (donateWin && !donateWin.isDestroyed()) donateWin.show(); });
   });
   donateWin.on('closed', () => { donateWin = null; });
 }

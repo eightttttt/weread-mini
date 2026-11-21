@@ -6,59 +6,59 @@
 <title>请作者喝瓶水</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  /* 窗口本身带系统毛玻璃（Win11）；这里再叠一层深色半透明，没有毛玻璃的系统上就是深色底 */
-  html, body { height: 100%; overflow: hidden; user-select: none; color: #e6eaf0;
+  /* 与工具栏同款白色毛玻璃：窗口本身开系统毛玻璃（Win11），这里叠一层白色半透明；没有毛玻璃的系统上就是浅色底 */
+  html { overflow: hidden; user-select: none; color: #1f2937;
     font-family: "Microsoft YaHei UI", "PingFang SC", system-ui, sans-serif; }
-  body { background: linear-gradient(170deg, rgba(34,40,52,.72) 0%, rgba(20,23,30,.80) 100%);
-    -webkit-app-region: drag; text-align: center; padding: 18px 22px 14px; position: relative; }
+  body { background: linear-gradient(180deg, rgba(255,255,255,.78) 0%, rgba(244,246,250,.70) 100%);
+    -webkit-app-region: drag; text-align: center; padding: 20px 22px 18px; position: relative; min-height: 100vh; }
   body::before { content: ""; position: absolute; inset: 0; pointer-events: none;
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); }
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.9), inset 0 0 0 1px rgba(0,0,0,.06); }
 
-  .close { position: absolute; top: 10px; right: 10px; width: 24px; height: 24px; border-radius: 6px; border: 0;
-    background: transparent; color: rgba(230,234,240,.55); font-size: 13px; cursor: pointer; -webkit-app-region: no-drag; }
-  .close:hover { background: rgba(255,255,255,.10); color: #fff; }
+  .close { position: absolute; top: 9px; right: 9px; width: 24px; height: 24px; border-radius: 6px; border: 0;
+    background: transparent; color: #9aa3af; font-size: 13px; cursor: pointer; -webkit-app-region: no-drag; }
+  .close:hover { background: rgba(0,0,0,.06); color: #374151; }
 
   /* 图标：微信读书同款蓝色渐变圆角方块 + 白色水滴 */
-  .logo { width: 40px; height: 40px; margin: 2px auto 0; border-radius: 11px; display: grid; place-items: center;
+  .logo { width: 38px; height: 38px; margin: 0 auto; border-radius: 10px; display: grid; place-items: center;
     background: linear-gradient(150deg, #5cb0ff 0%, #2a7cf0 55%, #1c5fd6 100%);
-    box-shadow: 0 4px 14px rgba(42,124,240,.35), inset 0 1px 0 rgba(255,255,255,.35); }
-  h1 { font-size: 16px; font-weight: 600; margin-top: 10px; letter-spacing: .5px; }
-  .sub { font-size: 12px; color: rgba(230,234,240,.62); line-height: 1.7; margin-top: 4px; }
+    box-shadow: 0 4px 12px rgba(42,124,240,.30), inset 0 1px 0 rgba(255,255,255,.35); }
+  h1 { font-size: 16px; font-weight: 600; margin-top: 10px; letter-spacing: .5px; color: #111827; }
+  .sub { font-size: 12px; color: #6b7280; line-height: 1.7; margin-top: 4px; }
 
-  .tabs { display: inline-flex; margin-top: 12px; padding: 3px; border-radius: 8px;
-    background: rgba(255,255,255,.07); box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); -webkit-app-region: no-drag; }
-  .tab { border: 0; border-radius: 6px; padding: 4px 16px; font-size: 12px; cursor: pointer; font-family: inherit;
-    background: transparent; color: rgba(230,234,240,.6); transition: background .15s, color .15s; }
-  .tab:hover { color: #fff; }
-  .tab.on { background: linear-gradient(150deg, #4da6ff, #2a7cf0); color: #fff; box-shadow: 0 1px 6px rgba(42,124,240,.4); }
+  .tabs { display: inline-flex; margin-top: 14px; padding: 3px; border-radius: 8px;
+    background: rgba(0,0,0,.05); box-shadow: inset 0 0 0 1px rgba(0,0,0,.04); -webkit-app-region: no-drag; }
+  .tab { border: 0; border-radius: 6px; padding: 4px 18px; font-size: 12px; cursor: pointer; font-family: inherit;
+    background: transparent; color: #6b7280; transition: background .15s, color .15s; }
+  .tab:hover { color: #111827; }
+  .tab.on { background: linear-gradient(150deg, #4da6ff, #2a7cf0); color: #fff; box-shadow: 0 1px 5px rgba(42,124,240,.35); }
 
-  .qr { width: 164px; height: 164px; margin: 12px auto 0; border-radius: 12px; background: #fff; padding: 8px;
-    display: grid; place-items: center; box-shadow: 0 6px 20px rgba(0,0,0,.35); -webkit-app-region: no-drag; }
+  .qr { width: 160px; height: 160px; margin: 12px auto 0; border-radius: 12px; background: #fff; padding: 8px;
+    display: grid; place-items: center; box-shadow: 0 0 0 1px rgba(0,0,0,.06), 0 4px 14px rgba(15,23,42,.10); -webkit-app-region: no-drag; }
   .qr img { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
   .qr .none { font-size: 12px; color: #8a94a3; line-height: 1.7; }
-  .hint { font-size: 11px; color: rgba(230,234,240,.45); margin-top: 8px; min-height: 15px; }
+  .hint { font-size: 11px; color: #9aa3af; margin-top: 8px; min-height: 15px; }
 
-  .ok { margin-top: 10px; border: 0; border-radius: 8px; padding: 6px 20px; font-size: 12px; cursor: pointer;
-    font-family: inherit; color: #cfe3ff; background: rgba(42,124,240,.18); box-shadow: inset 0 0 0 1px rgba(77,166,255,.35);
+  .ok { margin-top: 10px; border: 0; border-radius: 8px; padding: 6px 22px; font-size: 12px; cursor: pointer;
+    font-family: inherit; color: #1d6fe8; background: rgba(42,124,240,.10); box-shadow: inset 0 0 0 1px rgba(42,124,240,.28);
     -webkit-app-region: no-drag; transition: background .15s, color .15s; }
-  .ok:hover { background: rgba(42,124,240,.32); color: #fff; }
-  .foot { font-size: 11px; color: rgba(230,234,240,.38); margin-top: 8px; }
+  .ok:hover { background: rgba(42,124,240,.18); }
 
-  .fb { margin-top: 12px; -webkit-app-region: no-drag; }
-  .fbt { font-size: 11px; color: rgba(230,234,240,.42); }
-  .xhs { display: inline-flex; align-items: center; gap: 5px; margin-top: 4px; font-size: 12px; color: rgba(140,190,255,.85);
+  /* 底部：细分隔线 + 反馈入口 */
+  .fb { margin: 16px -22px 0; padding-top: 12px; border-top: 1px solid rgba(0,0,0,.07); -webkit-app-region: no-drag; }
+  .fbt { font-size: 11px; color: #9aa3af; }
+  .xhs { display: inline-flex; align-items: center; gap: 5px; margin-top: 4px; font-size: 12px; color: #374151;
     text-decoration: none; cursor: pointer; }
-  .xhs:hover { color: #a9d2ff; }
-  .xhs:hover .xn { text-decoration: underline; }
+  .xhs:hover { color: #1d6fe8; }
   .xi { width: 16px; height: 16px; display: inline-grid; place-items: center; }
   .xi svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linejoin: round; }
   .xi img { width: 16px; height: 16px; border-radius: 4px; }
+
   .done { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
-    background: linear-gradient(170deg, rgba(34,40,52,.92), rgba(20,23,30,.95)); }
+    background: linear-gradient(180deg, rgba(255,255,255,.96), rgba(244,246,250,.96)); }
   .done.show { display: flex; animation: fade .3s ease-out; }
   @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
-  .done p { font-size: 15px; font-weight: 600; }
-  .done small { font-size: 12px; color: rgba(230,234,240,.55); }
+  .done p { font-size: 15px; font-weight: 600; color: #111827; }
+  .done small { font-size: 12px; color: #6b7280; }
 </style>
 </head>
 <body>
@@ -87,13 +87,16 @@
 
   <div class="done" id="done">
     <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true">
-      <circle cx="17" cy="17" r="16" fill="rgba(42,124,240,.22)" stroke="#4da6ff" stroke-width="1.5"/>
+      <circle cx="17" cy="17" r="16" fill="#2a7cf0"/>
       <path d="M10.5 17.5 l4.5 4.5 l8.5 -9" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
     </svg>
     <p>谢谢支持</p>
     <small>会继续把小窗做得更好用</small>
   </div>
 <script>
+  window.contentHeight = () => {               // 内容本身的高度（不算撑满窗口的部分）
+    document.body.style.minHeight = '0'; const h = Math.ceil(document.body.scrollHeight); document.body.style.minHeight = ''; return h;
+  };
   let codes = { wx: '', ali: '' };
   const $ = (id) => document.getElementById(id);
   const HINT = { wx: '打开微信扫一扫', ali: '打开支付宝扫一扫' };
