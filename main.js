@@ -765,7 +765,7 @@ function donateCode(name) {
 }
 function openDonate() {
   if (donateWin && !donateWin.isDestroyed()) { donateWin.show(); donateWin.focus(); return; }
-  const W = 280, H = 484;
+  const W = 280, H = 474;
   const area = screen.getDisplayMatching(alive() ? win.getBounds() : { x: 0, y: 0, width: 1, height: 1 }).workArea;
   // 不用 transparent：这样 Win11 会给无边框窗口加系统圆角，同时可以开系统毛玻璃（acrylic）。
   // 不支持毛玻璃的系统上退回深色底（页面本身是深色半透明叠在深色窗口底色上）。
@@ -862,7 +862,7 @@ function refreshTrayMenu() {
       page.webContents.loadURL(HOME);
     } },
     { type: 'separator' },
-    { label: '反馈与更新（小红书）', click: () => shell.openExternal(XHS_URL) },
+    { label: '反馈与更新（小红书 @东尼滝谷）', click: () => shell.openExternal(XHS_URL) },
     { label: '请作者喝瓶水', click: openDonate },
     { label: '退出', click: () => { shutdown(); app.quit(); } },
   ]));
