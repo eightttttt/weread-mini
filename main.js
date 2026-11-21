@@ -765,7 +765,7 @@ function donateCode(name) {
 }
 function openDonate() {
   if (donateWin && !donateWin.isDestroyed()) { donateWin.show(); donateWin.focus(); return; }
-  const W = 280, H = 474;
+  const W = 280, H = 494;
   const area = screen.getDisplayMatching(alive() ? win.getBounds() : { x: 0, y: 0, width: 1, height: 1 }).workArea;
   // 不用 transparent：这样 Win11 会给无边框窗口加系统圆角，同时可以开系统毛玻璃（acrylic）。
   // 不支持毛玻璃的系统上退回深色底（页面本身是深色半透明叠在深色窗口底色上）。
@@ -784,7 +784,7 @@ function openDonate() {
   donateWin.loadFile(path.join(__dirname, 'donate.html'));
   donateWin.webContents.once('did-finish-load', () => {
     if (!donateWin || donateWin.isDestroyed()) return;
-    donateWin.webContents.executeJavaScript(`setCodes(${JSON.stringify({ wx: donateCode('wechat'), ali: donateCode('alipay'), xhs: XHS_URL })})`).catch(() => {});
+    donateWin.webContents.executeJavaScript(`setCodes(${JSON.stringify({ wx: donateCode('wechat'), ali: donateCode('alipay'), xhs: XHS_URL, xhsIcon: donateCode('xhs') })})`).catch(() => {});
     donateWin.show();
   });
   donateWin.on('closed', () => { donateWin = null; });

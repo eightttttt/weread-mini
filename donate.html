@@ -44,9 +44,15 @@
   .ok:hover { background: rgba(42,124,240,.32); color: #fff; }
   .foot { font-size: 11px; color: rgba(230,234,240,.38); margin-top: 8px; }
 
-  .xhs { display: inline-block; margin-top: 10px; font-size: 11px; color: rgba(140,190,255,.75); text-decoration: none;
-    -webkit-app-region: no-drag; cursor: pointer; }
-  .xhs:hover { color: #8cc4ff; text-decoration: underline; }
+  .fb { margin-top: 12px; -webkit-app-region: no-drag; }
+  .fbt { font-size: 11px; color: rgba(230,234,240,.42); }
+  .xhs { display: inline-flex; align-items: center; gap: 5px; margin-top: 4px; font-size: 12px; color: rgba(140,190,255,.85);
+    text-decoration: none; cursor: pointer; }
+  .xhs:hover { color: #a9d2ff; }
+  .xhs:hover .xn { text-decoration: underline; }
+  .xi { width: 16px; height: 16px; display: inline-grid; place-items: center; }
+  .xi svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linejoin: round; }
+  .xi img { width: 16px; height: 16px; border-radius: 4px; }
   .done { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
     background: linear-gradient(170deg, rgba(34,40,52,.92), rgba(20,23,30,.95)); }
   .done.show { display: flex; animation: fade .3s ease-out; }
@@ -74,7 +80,10 @@
   <div class="hint" id="hint"></div>
 
   <button class="ok" id="ok">已支持</button>
-  <a class="xhs" id="xhs" href="#" title="在浏览器中打开">反馈与新版本：小红书 @东尼滝谷 ›</a>
+  <div class="fb" id="fb">
+    <div class="fbt">反馈与新版本</div>
+    <a class="xhs" id="xhs" href="#" title="在浏览器中打开小红书主页"><span class="xi" id="xi"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 3.5h10a1.5 1.5 0 0 1 1.5 1.5v5a1.5 1.5 0 0 1-1.5 1.5H7.2L4.5 13.6v-2.1H3A1.5 1.5 0 0 1 1.5 10V5A1.5 1.5 0 0 1 3 3.5z"/></svg></span>@东尼滝谷 ›</a>
+  </div>
 
   <div class="done" id="done">
     <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true">
@@ -96,7 +105,8 @@
   // 主进程注入收款码（data URL）；只有一种码时隐藏切换按钮
   let xhs = '';
   window.setCodes = (c) => {
-    xhs = c.xhs || ''; $('xhs').style.display = xhs ? '' : 'none';
+    xhs = c.xhs || ''; $('fb').style.display = xhs ? '' : 'none';
+    if (c.xhsIcon) $('xi').innerHTML = `<img src="${c.xhsIcon}" alt="">`;   // 有图标文件时换成图标
     codes = { wx: c.wx || '', ali: c.ali || '' };
     $('tabs').style.display = (codes.wx && codes.ali) || (!codes.wx && !codes.ali) ? '' : 'none';
     show(codes.wx || !codes.ali ? 'wx' : 'ali');
