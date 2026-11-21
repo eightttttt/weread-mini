@@ -1,5 +1,5 @@
 {
-  "version": "2.34.0",
+  "version": "2.41.0",
   "url": "https://pan.baidu.com/s/1oGRVjsakr1RhLVlZSLPeHw?pwd=eii6",
-  "notes": "网页改版时自动换回原版排版，保证能正常阅读；新增检查新版本。"
+  "notes": "界面更清爽：工具栏与页面分界更干净，滚动条平时隐藏、不再占位；书架去掉顶部会员卡片，窗口变窄时保留微信读书标志、搜索和头像。"
 }
