@@ -62,7 +62,7 @@ Electron 45，一个 `BaseWindow`（无边框、`transparent: true`、背景 `#0
 
 - 工具栏（`bar.html`）：书名+页数玻璃块 `#tblock`（`#title` + `#prog`，进度由主进程每 400ms 发 `prog`）、缩放组、自动翻页组、播报条、色调、不透明度滑块、隐身、置顶、沉浸、`⋯` 更多、最小化、关闭。窗口变窄时 `fitBar()` 按优先级收起（数字小先收）：op 10, reload 15, min 20, zv 30, back 35, autoMore 40, home 45, pin 50, tone 55, zoomGroup 65, immersive 70, ticker 80, autoGroup 85, fade 90, prog 95；收起的进 `⋯` 菜单（主进程 `moreMenu`）。
 - `inject.js`：窄边距 CSS（`T=12` 顶、`B=10` 底，左右 `M`）、点击左/右 1/3 翻页（120ms 延迟，弹窗打开时跳过）、左下书架按钮 `#__wrm_shelf` / 右下 ☰ `#__wrm_tg`（`fitButtons()` 按窗口宽度缩放，除以 zoom）、位置记忆（localStorage `wrm_pos`）、`window.__wrm` API（next/prev/scroll/pageText/progress/setTop…）。
-- 播报条（`main.js` ticker 段 + `ticker.html`）：速度 `TICKER_SPEEDS`、字号 `TICKER_FONTS`、高度 = 字号×2+8；左侧 34px 功能区悬停才出现按钮（暂停、字号−+、背景、快、慢）；滚轮调速、Ctrl+滚轮调字号、双击/Esc 退出；文字取自 `__wrm.pageText()`，读完自动翻页续上（`awaiting` 防重复翻页），退出时翻回原页。
+- 播报条（`main.js` ticker 段 + `ticker.html`）：速度 `TICKER_SPEEDS`、字号 `TICKER_FONTS`、高度 = 字号×2+8；左侧 34px 功能区悬停才出现按钮（暂停、字号−+、背景、快、慢）；滚轮调速、Ctrl+滚轮调字号、双击/Esc 退出；文字取自 `__wrm.pageText()`，读完自动翻页续上（`awaiting` 防重复翻页），退出时翻回原页。看不见时自动停住：`syncTickerHold()`（隐身 / 隐藏到托盘 / 最小化）给 ticker 发 `hold`，与手动暂停 `paused` 互相独立。
 - 全局快捷键见 README。
 
 ## 测试方法
@@ -83,4 +83,4 @@ npm run pack:win   # electron-packager，asar，输出 dist/WeReadMini-win32-x64
 
 ## 版本历史（摘要）
 
-v1.x 基础小窗、置顶、托盘、隐身、自动翻页、窄边距、点击翻页、收纳菜单 → v2.1 按 1.9 重做字号/按钮缩放 → v2.3 首次上传 GitHub → v2.4 修自动乱翻页、毛玻璃工具栏、透明背景 → v2.5 书架/☰ 移到下方两角 → v2.6–2.11 播报条及其修复 → v2.12 工具栏优先级收起 → v2.13–2.14 进度显示移到工具栏 → v2.15–2.16 修划线错位 → v2.17 书名+页数玻璃块 → v2.18 圆角窗口 → v2.19 请作者喝瓶水（打赏弹窗）→ v2.20 打赏弹窗改深色毛玻璃 + 收款码。详见 `git log`。
+v1.x 基础小窗、置顶、托盘、隐身、自动翻页、窄边距、点击翻页、收纳菜单 → v2.1 按 1.9 重做字号/按钮缩放 → v2.3 首次上传 GitHub → v2.4 修自动乱翻页、毛玻璃工具栏、透明背景 → v2.5 书架/☰ 移到下方两角 → v2.6–2.11 播报条及其修复 → v2.12 工具栏优先级收起 → v2.13–2.14 进度显示移到工具栏 → v2.15–2.16 修划线错位 → v2.17 书名+页数玻璃块 → v2.18 圆角窗口 → v2.19 请作者喝瓶水（打赏弹窗）→ v2.20 打赏弹窗改深色毛玻璃 + 收款码 → v2.21 播报条隐身/隐藏时自动暂停。详见 `git log`。

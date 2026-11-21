@@ -142,6 +142,13 @@ function applyOpacity() {
     win.setIgnoreMouseEvents(faded, { forward: true });
   }
   win.setOpacity(faded ? cfg.fadeLevel : cfg.opacity);
+  syncTickerHold();
+}
+// 播报条在看不见时自动暂停：隐身（鼠标移开）、隐藏到托盘 / 老板键；回来后自动继续（不影响手动暂停）
+function syncTickerHold() {
+  if (!alive() || !ticker.on) return;
+  const hold = (cfg.fade && !hovering) || autoHidden || !win.isVisible() || win.isMinimized();
+  tickerSend({ type: 'hold', on: hold });
 }
 // ---------- 字体缩放 ----------
 function clampZoom(z) {
@@ -300,7 +307,7 @@ function setAuto(on) {
 function autoPauseHidden(h) {
   autoHidden = h;
   if (!h) autoNext = Date.now() + cfg.autoInterval * 1000;
-  syncScroll(); sendAuto();
+  syncScroll(); sendAuto(); syncTickerHold();
 }
 function autoResetCountdown() { if (autoOn) { autoNext = Date.now() + cfg.autoInterval * 1000; sendAuto(); } }
 function autoAdjust(dir) {          // 调快/调慢（按当前阅读方式）
@@ -578,6 +585,7 @@ async function enterTicker() {
   tickerSend({ type: 'font', size: cfg.tickerFont });
   tickerSend({ type: 'clear', clear: cfg.tickerClear });
   applyMaterial();
+  syncTickerHold();
   tickerSend({ type: 'tip', text: '双击或 Esc 退出 · 滚轮调速度 · Ctrl+滚轮调字号' });
   refreshTrayMenu(); sendState();
   tickerFeed(false);

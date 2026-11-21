@@ -68,7 +68,7 @@
   const strip = $('strip'), track = $('track'), clip = $('clip');
   let speed = 60;          // 像素/秒
   let x = 0;               // 文字条当前位移
-  let paused = false, last = performance.now(), asked = false;
+  let paused = false, hold = false, last = performance.now(), asked = false;
 
   function setFont(px) { track.style.fontSize = px + 'px'; }
   setFont(18);
@@ -83,7 +83,7 @@
 
   function frame(now) {
     const dt = Math.min(0.1, (now - last) / 1000); last = now;
-    if (!paused && track.firstChild) x -= speed * dt;
+    if (!paused && !hold && track.firstChild) x -= speed * dt;   // hold：窗口隐身/隐藏时自动停住
     // 移出左边的段落删掉，并告诉主程序“读到了哪一页”
     let first = track.firstElementChild;
     while (first && x + first.offsetWidth < 0 && track.children.length > 1) {
@@ -109,6 +109,7 @@
     else if (m.type === 'tip') tip(m.text);
     else if (m.type === 'clear') document.body.classList.toggle('clear', !!m.clear);
     else if (m.type === 'retry') asked = false;
+    else if (m.type === 'hold') hold = !!m.on;
     else if (m.type === 'font') { setFont(m.size); if (m.show) tip(`字号 ${m.size}`); }
   });
 
